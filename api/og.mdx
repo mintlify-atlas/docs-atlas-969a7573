@@ -1,0 +1,185 @@
+---
+title: Open Graph Images
+description: Generate Open Graph images for social media sharing
+---
+
+<Note>
+Endpoint: `GET /api/og`
+</Note>
+
+Generate dynamic Open Graph (OG) images for rich social media previews. This endpoint creates 1200x630px images optimized for Twitter, Facebook, LinkedIn, and other platforms.
+
+## Request
+
+### Query Parameters
+
+<ParamField query="owner" type="string" default="">
+  Repository owner (username or organization name)
+  
+  Example: `vercel`, `facebook`
+</ParamField>
+
+<ParamField query="repo" type="string" default="">
+  Repository name
+  
+  Example: `next.js`, `react`
+</ParamField>
+
+<ParamField query="year" type="string" default="Current year">
+  Year to display on the OG image
+  
+  Example: `2024`
+</ParamField>
+
+## Response
+
+### Success Response
+
+Returns an image with:
+- **Format**: PNG
+- **Dimensions**: 1200x630px (optimal for social media)
+- **Content-Type**: `image/png`
+
+### Image Design
+
+The generated OG image features:
+
+- **Dark theme** with radial gradient background (`#09090b` to `#27272a`)
+- **Grid pattern** overlay for visual depth
+- **GitHub icon** and "GitHub Wrapped" branding
+- **Repository name** in large, bold typography (`{owner}/{repo}`)
+- **Year badge** with "{year} Year in Review" text
+- **Card-style layout** with border and shadow effects
+
+<Info>
+This endpoint runs on the Vercel Edge Runtime for optimal performance and global distribution.
+</Info>
+
+### Example Request
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/og?owner=vercel&repo=next.js&year=2024"
+```
+
+```html HTML
+<meta property="og:image" content="https://your-domain.com/api/og?owner=vercel&repo=next.js&year=2024" />
+```
+
+```typescript Next.js Metadata
+export async function generateMetadata({ params }): Promise<Metadata> {
+  const { owner, repo, year } = params;
+  
+  return {
+    openGraph: {
+      images: [`/api/og?owner=${owner}&repo=${repo}&year=${year}`],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      images: [`/api/og?owner=${owner}&repo=${repo}&year=${year}`],
+    },
+  };
+}
+```
+</CodeGroup>
+
+## Platform Support
+
+The OG images are optimized for:
+
+| Platform | Card Type | Recommended Size |
+|----------|-----------|------------------|
+| Twitter/X | Summary Large Image | 1200x630px ✓ |
+| Facebook | Link Preview | 1200x630px ✓ |
+| LinkedIn | Post Preview | 1200x627px ✓ |
+| Slack | Unfurl | 1200x630px ✓ |
+| Discord | Embed | 1200x630px ✓ |
+
+## Technical Details
+
+### Edge Runtime
+
+```typescript
+export const runtime = 'edge';
+```
+
+The endpoint runs on Vercel's Edge Runtime for:
+- **Low latency**: Generated at the edge, close to users
+- **Global distribution**: Cached at CDN edge locations
+- **Fast execution**: No cold starts
+
+### Image Generation
+
+Uses `@vercel/og` library with React-like JSX syntax:
+
+```typescript
+import { ImageResponse } from '@vercel/og';
+
+return new ImageResponse(
+  <div style={{ /* styles */ }}>
+    {/* SVG and text content */}
+  </div>,
+  { width: 1200, height: 630 }
+);
+```
+
+### Styling
+
+- **Background**: Radial gradient from zinc-700 to zinc-950
+- **Typography**: Sans-serif font, bold weights
+- **Colors**: Zinc palette for consistency
+- **Layout**: Flexbox-centered with responsive padding
+- **Effects**: Border, border-radius, box-shadow for depth
+
+## Error Handling
+
+### 500 Internal Server Error
+
+Returns plain text error message if image generation fails:
+
+```
+Failed to generate OG image: {error message}
+```
+
+Common causes:
+- Invalid JSX syntax in image template
+- Missing required dependencies
+- Edge runtime limitations
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="code-branch" href="/api/wrapped">
+    Generate repository analytics that pair with this OG image
+  </Card>
+  
+  <Card title="User Wrapped" icon="user" href="/api/user-wrapped">
+    Generate user analytics with custom OG images
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<Tip>
+Cache OG images at the CDN level for better performance. The image content is static for a given owner/repo/year combination.
+</Tip>
+
+<Warning>
+Vercel Edge Runtime has a 30-second timeout. Keep image generation simple to avoid timeouts.
+</Warning>
+
+### Meta Tags Integration
+
+Always include both OpenGraph and Twitter meta tags:
+
+```html
+<!-- OpenGraph -->
+<meta property="og:title" content="GitHub Wrapped 2024" />
+<meta property="og:description" content="Year in review for {owner}/{repo}" />
+<meta property="og:image" content="/api/og?owner={owner}&repo={repo}&year={year}" />
+<meta property="og:url" content="https://your-domain.com/wrapped/{owner}/{repo}/{year}" />
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="/api/og?owner={owner}&repo={repo}&year={year}" />
+```

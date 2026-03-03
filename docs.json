@@ -67,7 +67,8 @@
               "api/user-wrapped",
               "api/validate",
               "api/performance",
-              "api/summary"
+              "api/summary",
+              "api/og"
             ]
           },
           {
