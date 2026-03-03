@@ -1,0 +1,322 @@
+---
+title: GitHub API Rate Limits
+description: Understanding and managing GitHub API rate limits in GitHub Wrapped
+---
+
+GitHub Wrapped makes extensive use of the GitHub API to fetch repository data. Understanding rate limits and how the application handles them is crucial for a smooth experience.
+
+## Rate Limit Basics
+
+GitHub enforces different rate limits depending on how you authenticate:
+
+| Authentication Method | Requests per Hour | Requests per Minute |
+|-----------------------|-------------------|---------------------|
+| **Unauthenticated** | 60 | ~1 |
+| **Authenticated** (with token) | 5,000 | ~83 |
+| **GitHub Apps** | 5,000 (per installation) | ~83 |
+
+<Warning>
+  Unauthenticated requests are limited to just 60 per hour and are tracked by IP address. This can be quickly exhausted, especially in shared network environments.
+</Warning>
+
+## How GitHub Wrapped Uses the API
+
+Generating a wrapped for a repository requires multiple API calls:
+
+### Typical API Call Breakdown
+
+For a medium-sized repository (one year of data):
+
+- **Repository info**: 1 request
+- **Contributors**: 1-10 requests (paginated, 100 per page)
+- **Commits**: 1-10 requests (paginated, 100 per page)
+- **Languages**: 1 request
+- **Issues**: 1-5 requests (paginated)
+- **Pull requests**: 1-5 requests (paginated)
+- **Stargazers**: 1-5 requests (paginated)
+- **Releases**: 1 request
+
+**Total: ~10-40 requests per wrapped generation**
+
+<Note>
+  Large repositories with thousands of commits or contributors may require significantly more API calls.
+</Note>
+
+## Rate Limit Handling in the Code
+
+GitHub Wrapped includes intelligent rate limit handling to prevent errors and provide a better user experience.
+
+### Rate Limit Checking
+
+The application checks available rate limits before making API calls:
+
+```typescript
+// lib/github.ts:22-39
+async getRateLimit(): Promise<RateLimitInfo> {
+  if (isDev) {
+    // Skip rate limit pressure during local development
+    const now = Date.now();
+    return {
+      remaining: Number.MAX_SAFE_INTEGER,
+      reset: now + 60 * 60 * 1000,
+      limit: Number.MAX_SAFE_INTEGER,
+    };
+  }
+
+  const { data } = await this.octokit.rateLimit.get();
+  return {
+    remaining: data.rate.remaining,
+    reset: data.rate.reset * 1000, // Convert to milliseconds
+    limit: data.rate.limit,
+  };
+}
+```
+
+### Error Handling for Rate Limits
+
+When rate limits are exceeded, the application provides clear error messages:
+
+```typescript
+// lib/github.ts:54-68
+if (error.status === 403) {
+  const remaining = error.response?.headers?.["x-ratelimit-remaining"];
+  const isRateLimited =
+    remaining === "0" ||
+    (typeof error.message === "string" &&
+      error.message.toLowerCase().includes("rate limit"));
+
+  if (isRateLimited) {
+    if (isDev) {
+      // In dev, let validation pass to avoid blocking flows
+      return true;
+    }
+    throw new Error(
+      "GitHub rate limit exceeded. Add GITHUB_TOKEN or try again later."
+    );
+  }
+}
+```
+
+### Development Mode Exemption
+
+In development mode (`NODE_ENV=development`), rate limit checks are relaxed:
+
+```typescript
+// lib/github.ts:3
+const isDev = process.env.NODE_ENV === "development";
+```
+
+This prevents rate limit issues from blocking your local development workflow.
+
+## Avoiding Rate Limits
+
+### 1. Add a GitHub Token
+
+The single most effective way to avoid rate limits is to authenticate with a GitHub token:
+
+<Steps>
+  <Step title="Generate a personal access token">
+    Visit [GitHub Settings > Tokens](https://github.com/settings/tokens) and create a new token.
+    
+    For public repositories, no scopes are needed. For private repos, select the `repo` scope.
+  </Step>
+
+  <Step title="Add to environment variables">
+    Add your token to `.env.local`:
+    
+    ```bash
+    GITHUB_TOKEN=ghp_your_token_here
+    ```
+  </Step>
+
+  <Step title="Restart your server">
+    Restart your development or production server to apply the changes.
+  </Step>
+</Steps>
+
+**Impact:** Increases limit from 60/hour to 5,000/hour (83x improvement)
+
+### 2. Leverage the Built-in Cache
+
+GitHub Wrapped includes a 24-hour cache that dramatically reduces API calls for popular repositories:
+
+```typescript
+// lib/cache.ts:4
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+```
+
+When a wrapped is generated:
+1. First request: Makes API calls and caches the result
+2. Subsequent requests (within 24 hours): Returns cached data with **zero API calls**
+
+See the [Caching guide](/guides/caching) for more details.
+
+### 3. Use Redis for Distributed Caching
+
+For production deployments with multiple serverless instances, configure Redis:
+
+```bash
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_token_here
+```
+
+This ensures cache is shared across all instances, maximizing cache hit rates.
+
+### 4. Implement API Call Pagination Limits
+
+The codebase includes smart pagination limits to prevent excessive API calls:
+
+```typescript
+// lib/github.ts:95-96
+while (hasMore && page <= 10) {
+  // Limit to 10 pages to avoid rate limits
+```
+
+For contributors, commits, and other paginated endpoints, the app limits to:
+- **Contributors**: 10 pages (1,000 contributors max)
+- **Commits**: 10 pages (1,000 commits max)
+- **Issues/PRs**: 5 pages (500 items max)
+- **Stargazers**: 5 pages (500 stargazers max)
+
+## Monitoring Rate Limits
+
+### Check Current Rate Limit Status
+
+You can check your current rate limit status programmatically:
+
+```typescript
+import { GitHubService } from '@/lib/github';
+
+const github = new GitHubService();
+const rateLimit = await github.getRateLimit();
+
+console.log(`Remaining: ${rateLimit.remaining}/${rateLimit.limit}`);
+console.log(`Resets at: ${new Date(rateLimit.reset)}`);
+```
+
+### Using GitHub's API Directly
+
+Check your rate limit status via curl:
+
+<CodeGroup>
+```bash Unauthenticated
+curl https://api.github.com/rate_limit
+```
+
+```bash Authenticated
+curl -H "Authorization: token ghp_your_token" https://api.github.com/rate_limit
+```
+</CodeGroup>
+
+Response:
+```json
+{
+  "rate": {
+    "limit": 5000,
+    "remaining": 4999,
+    "reset": 1709479200,
+    "used": 1
+  }
+}
+```
+
+## What Happens When You Hit the Limit?
+
+When rate limits are exceeded:
+
+1. **Error message**: Users see a clear error message:
+   ```
+   GitHub rate limit exceeded. Add GITHUB_TOKEN or try again later.
+   ```
+
+2. **Retry-After header**: GitHub includes a `X-RateLimit-Reset` header indicating when limits reset
+
+3. **Automatic retry**: Some endpoints in the code handle errors gracefully:
+   ```typescript
+   // lib/github.ts:170-172
+   } catch {
+     return { additions: 0, deletions: 0 };
+   }
+   ```
+
+## Rate Limit Best Practices
+
+<CardGroup cols={2}>
+  <Card title="For Development" icon="laptop-code">
+    - Use `NODE_ENV=development` to bypass strict checks
+    - Add a personal access token to avoid interruptions
+    - Test with smaller repositories
+  </Card>
+
+  <Card title="For Production" icon="server">
+    - Always use a GitHub token
+    - Configure Redis for distributed caching
+    - Monitor rate limit usage
+    - Consider implementing request queuing for high traffic
+  </Card>
+</CardGroup>
+
+### Optimization Tips
+
+1. **Enable caching**: Always configure caching (in-memory or Redis) to reduce API calls
+2. **Use conditional requests**: GitHub supports ETags for conditional requests (future enhancement)
+3. **Batch requests**: The app already uses pagination efficiently
+4. **Monitor usage**: Track API usage patterns to identify optimization opportunities
+
+## Common Rate Limit Scenarios
+
+<AccordionGroup>
+  <Accordion title="Scenario 1: Development testing">
+    **Problem**: Repeatedly testing the same repository exhausts unauthenticated limits
+    
+    **Solution**:
+    - Add a `GITHUB_TOKEN` to your `.env.local`
+    - Development mode already relaxes rate limit checks
+    - Use the cache - subsequent requests use cached data
+  </Accordion>
+
+  <Accordion title="Scenario 2: High-traffic production site">
+    **Problem**: Multiple users generating wrappeds simultaneously
+    
+    **Solution**:
+    - Configure `GITHUB_TOKEN` for authenticated requests (5,000/hour)
+    - Set up Redis caching to share cache across instances
+    - Popular repositories will be served from cache (0 API calls)
+  </Accordion>
+
+  <Accordion title="Scenario 3: Very large repository">
+    **Problem**: Repository has 10,000+ commits and contributors
+    
+    **Solution**:
+    - The app limits pagination to prevent excessive calls
+    - Enable caching - large repos benefit most from cache
+    - Consider implementing request queuing or background jobs
+  </Accordion>
+
+  <Accordion title="Scenario 4: Shared network/IP">
+    **Problem**: Unauthenticated requests share IP-based limit
+    
+    **Solution**:
+    - Always use a `GITHUB_TOKEN` in shared environments
+    - Authenticated requests use per-token limits, not IP-based
+  </Accordion>
+</AccordionGroup>
+
+## Rate Limit Headers
+
+GitHub includes rate limit information in response headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Maximum requests per hour |
+| `X-RateLimit-Remaining` | Remaining requests in current window |
+| `X-RateLimit-Reset` | Unix timestamp when limit resets |
+| `X-RateLimit-Used` | Requests used in current window |
+
+The application uses these headers to detect and handle rate limit errors at `/home/daytona/workspace/source/lib/github.ts:55`.
+
+## Next Steps
+
+- Configure a [GitHub token](/guides/environment-variables#github_token)
+- Learn about the [caching system](/guides/caching)
+- Complete the [setup guide](/guides/setup)

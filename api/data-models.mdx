@@ -1,0 +1,646 @@
+---
+title: Data Models
+description: TypeScript interfaces and data structures used in the GitHub Wrapped API
+---
+
+This page documents all TypeScript interfaces and data models used throughout the GitHub Wrapped API.
+
+All interfaces are defined in `types/index.ts`.
+
+## Repository Models
+
+### RepositoryInfo
+
+Basic repository metadata.
+
+<ResponseField name="owner" type="string">
+  Repository owner username or organization name
+</ResponseField>
+
+<ResponseField name="repo" type="string">
+  Repository name
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Full repository name in `owner/repo` format
+</ResponseField>
+
+<ResponseField name="description" type="string | null">
+  Repository description (null if not set)
+</ResponseField>
+
+<ResponseField name="stars" type="number">
+  Total star count
+</ResponseField>
+
+<ResponseField name="forks" type="number">
+  Total fork count
+</ResponseField>
+
+<ResponseField name="language" type="string | null">
+  Primary programming language (null if not detected)
+</ResponseField>
+
+```typescript
+export interface RepositoryInfo {
+  owner: string;
+  repo: string;
+  name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+}
+```
+
+## User Models
+
+### UserProfile
+
+GitHub user profile information.
+
+<ResponseField name="username" type="string">
+  GitHub username
+</ResponseField>
+
+<ResponseField name="avatar_url" type="string">
+  URL to user's avatar image
+</ResponseField>
+
+<ResponseField name="name" type="string | null">
+  User's display name (null if not set)
+</ResponseField>
+
+<ResponseField name="bio" type="string | null">
+  User's bio (null if not set)
+</ResponseField>
+
+<ResponseField name="public_repos" type="number">
+  Number of public repositories
+</ResponseField>
+
+<ResponseField name="followers" type="number">
+  Number of followers
+</ResponseField>
+
+<ResponseField name="total_stars" type="number">
+  Total stars across all repositories owned by the user
+</ResponseField>
+
+```typescript
+export interface UserProfile {
+  username: string;
+  avatar_url: string;
+  name: string | null;
+  bio: string | null;
+  public_repos: number;
+  followers: number;
+  total_stars: number;
+}
+```
+
+## Contributor Models
+
+### Contributor
+
+Contributor statistics for a repository.
+
+<ResponseField name="login" type="string">
+  GitHub username
+</ResponseField>
+
+<ResponseField name="avatar_url" type="string">
+  URL to contributor's avatar image
+</ResponseField>
+
+<ResponseField name="contributions" type="number">
+  Number of contributions (commits)
+</ResponseField>
+
+<ResponseField name="linesAdded" type="number" optional>
+  Total lines of code added
+</ResponseField>
+
+<ResponseField name="linesRemoved" type="number" optional>
+  Total lines of code removed
+</ResponseField>
+
+```typescript
+export interface Contributor {
+  login: string;
+  avatar_url: string;
+  contributions: number;
+  linesAdded?: number;
+  linesRemoved?: number;
+}
+```
+
+## Activity Models
+
+### CommitStats
+
+Commit activity statistics and patterns.
+
+<ResponseField name="total" type="number">
+  Total number of commits
+</ResponseField>
+
+<ResponseField name="byMonth" type="Record<string, number>">
+  Commits grouped by month name
+  
+  Example: `{ "Jan": 45, "Feb": 67, "Mar": 89 }`
+</ResponseField>
+
+<ResponseField name="byDayOfWeek" type="Record<string, number>">
+  Commits grouped by day of week
+  
+  Example: `{ "Sunday": 12, "Monday": 45, "Tuesday": 67 }`
+</ResponseField>
+
+<ResponseField name="byHour" type="Record<string, number>">
+  Commits grouped by hour of day (0-23)
+  
+  Example: `{ "0": 5, "9": 45, "14": 67, "23": 12 }`
+</ResponseField>
+
+<ResponseField name="busiestMonth" type="object">
+  Month with highest activity
+  
+  <Expandable title="properties">
+    <ResponseField name="month" type="string">Month name (e.g., "Mar")</ResponseField>
+    <ResponseField name="count" type="number">Commit count</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="busiestWeek" type="object">
+  Week with highest activity
+  
+  <Expandable title="properties">
+    <ResponseField name="week" type="string">ISO week format (e.g., "2024-W12")</ResponseField>
+    <ResponseField name="count" type="number">Commit count</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="averagePerDay" type="number">
+  Average commits per day
+</ResponseField>
+
+```typescript
+export interface CommitStats {
+  total: number;
+  byMonth: Record<string, number>;
+  byDayOfWeek: Record<string, number>;
+  byHour: Record<string, number>;
+  busiestMonth: { month: string; count: number };
+  busiestWeek: { week: string; count: number };
+  averagePerDay: number;
+}
+```
+
+### LanguageStats
+
+Programming language usage statistics.
+
+<ResponseField name="language" type="string">
+  Programming language name (e.g., "TypeScript", "JavaScript")
+</ResponseField>
+
+<ResponseField name="bytes" type="number">
+  Total bytes of code in this language
+</ResponseField>
+
+<ResponseField name="percentage" type="number">
+  Percentage of total codebase (0-100)
+</ResponseField>
+
+```typescript
+export interface LanguageStats {
+  language: string;
+  bytes: number;
+  percentage: number;
+}
+```
+
+## Release Models
+
+### ReleaseInfo
+
+GitHub release information.
+
+<ResponseField name="tag_name" type="string">
+  Git tag name (e.g., "v1.0.0")
+</ResponseField>
+
+<ResponseField name="published_at" type="string">
+  ISO timestamp when the release was published
+</ResponseField>
+
+<ResponseField name="name" type="string | null">
+  Release name (null if not set)
+</ResponseField>
+
+<ResponseField name="isMajor" type="boolean">
+  Whether this is a major version release (e.g., v2.0.0 vs v1.2.3)
+</ResponseField>
+
+```typescript
+export interface ReleaseInfo {
+  tag_name: string;
+  published_at: string;
+  name: string | null;
+  isMajor: boolean;
+}
+```
+
+## Snapshot Models
+
+### MonthlySnapshot
+
+Month-by-month activity breakdown.
+
+<ResponseField name="month" type="string">
+  Month name (e.g., "Jan", "Feb")
+</ResponseField>
+
+<ResponseField name="commits" type="number">
+  Commits in this month
+</ResponseField>
+
+<ResponseField name="prsMerged" type="number">
+  Pull requests merged in this month
+</ResponseField>
+
+<ResponseField name="issuesOpened" type="number">
+  Issues opened in this month
+</ResponseField>
+
+<ResponseField name="issuesClosed" type="number">
+  Issues closed in this month
+</ResponseField>
+
+<ResponseField name="reviews" type="number">
+  PR reviews performed in this month
+</ResponseField>
+
+<ResponseField name="stars" type="number">
+  Stars gained in this month (repository wrapped only)
+</ResponseField>
+
+<ResponseField name="forks" type="number">
+  Forks gained in this month (repository wrapped only)
+</ResponseField>
+
+<ResponseField name="trafficViews" type="number" optional>
+  Repository views in this month
+</ResponseField>
+
+<ResponseField name="trafficClones" type="number" optional>
+  Repository clones in this month
+</ResponseField>
+
+<ResponseField name="contributors" type="number">
+  Unique contributors in this month
+</ResponseField>
+
+<ResponseField name="topRepos" type="array" optional>
+  Top repositories for this month (user wrapped only)
+  
+  <Expandable title="array items">
+    <ResponseField name="name" type="string">Repository name</ResponseField>
+    <ResponseField name="commits" type="number">Commits to this repo</ResponseField>
+    <ResponseField name="prsMerged" type="number">PRs merged in this repo</ResponseField>
+    <ResponseField name="issuesOpened" type="number">Issues opened in this repo</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="topLanguages" type="LanguageStats[]" optional>
+  Top languages used in this month
+</ResponseField>
+
+```typescript
+export interface MonthlySnapshot {
+  month: string; // e.g., "Jan"
+  commits: number;
+  prsMerged: number;
+  issuesOpened: number;
+  issuesClosed: number;
+  reviews: number;
+  stars: number;
+  forks: number;
+  trafficViews?: number;
+  trafficClones?: number;
+  contributors: number;
+  topRepos?: Array<{
+    name: string;
+    commits: number;
+    prsMerged: number;
+    issuesOpened: number;
+  }>;
+  topLanguages?: LanguageStats[];
+}
+```
+
+## Wrapped Data Models
+
+### WrappedData
+
+Complete repository year-in-review data returned by `/api/wrapped`.
+
+<ResponseField name="repository" type="RepositoryInfo">
+  Repository metadata
+</ResponseField>
+
+<ResponseField name="year" type="number">
+  The year this wrapped data covers
+</ResponseField>
+
+<ResponseField name="contributors" type="object">
+  Contributor statistics
+  
+  <Expandable title="properties">
+    <ResponseField name="topByCommits" type="Contributor[]">
+      Top contributors sorted by commit count
+    </ResponseField>
+    <ResponseField name="topByLines" type="Contributor[]">
+      Top contributors sorted by lines changed
+    </ResponseField>
+    <ResponseField name="newContributors" type="number">
+      Number of first-time contributors this year
+    </ResponseField>
+    <ResponseField name="mostActiveReviewer" type="Contributor" optional>
+      Contributor who performed the most PR reviews
+    </ResponseField>
+    <ResponseField name="total" type="number">
+      Total number of contributors
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="activity" type="CommitStats">
+  Commit activity patterns
+</ResponseField>
+
+<ResponseField name="community" type="object">
+  Community growth metrics
+  
+  <Expandable title="properties">
+    <ResponseField name="starsGained" type="number">New stars this year</ResponseField>
+    <ResponseField name="forksGained" type="number">New forks this year</ResponseField>
+    <ResponseField name="issuesOpened" type="number">Issues opened</ResponseField>
+    <ResponseField name="issuesClosed" type="number">Issues closed</ResponseField>
+    <ResponseField name="prsMerged" type="number">Pull requests merged</ResponseField>
+    <ResponseField name="watchersGained" type="number">New watchers</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="languages" type="LanguageStats[]">
+  Programming language breakdown
+</ResponseField>
+
+<ResponseField name="releases" type="ReleaseInfo[]">
+  Releases published this year
+</ResponseField>
+
+<ResponseField name="mostEditedFiles" type="array">
+  Files with the most changes
+  
+  <Expandable title="array items">
+    <ResponseField name="path" type="string">File path</ResponseField>
+    <ResponseField name="changes" type="number">Number of changes</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="monthly" type="MonthlySnapshot[]" optional>
+  Month-by-month breakdown
+</ResponseField>
+
+<ResponseField name="generatedAt" type="string">
+  ISO timestamp when data was generated
+</ResponseField>
+
+```typescript
+export interface WrappedData {
+  repository: RepositoryInfo;
+  year: number;
+  contributors: {
+    topByCommits: Contributor[];
+    topByLines: Contributor[];
+    newContributors: number;
+    mostActiveReviewer?: Contributor;
+    total: number;
+  };
+  activity: CommitStats;
+  community: {
+    starsGained: number;
+    forksGained: number;
+    issuesOpened: number;
+    issuesClosed: number;
+    prsMerged: number;
+    watchersGained: number;
+  };
+  languages: LanguageStats[];
+  releases: ReleaseInfo[];
+  mostEditedFiles: Array<{ path: string; changes: number }>;
+  monthly?: MonthlySnapshot[];
+  generatedAt: string;
+}
+```
+
+### UserWrappedData
+
+Complete user year-in-review data returned by `/api/wrapped/user`, `/api/performance`, and `/api/summary`.
+
+<ResponseField name="user" type="UserProfile">
+  User profile information
+</ResponseField>
+
+<ResponseField name="year" type="number">
+  The year this wrapped data covers
+</ResponseField>
+
+<ResponseField name="overview" type="object">
+  High-level activity summary
+  
+  <Expandable title="properties">
+    <ResponseField name="totalCommits" type="number">Total commits</ResponseField>
+    <ResponseField name="totalPRs" type="number">Total pull requests</ResponseField>
+    <ResponseField name="totalIssues" type="number">Total issues</ResponseField>
+    <ResponseField name="topLanguages" type="LanguageStats[]">Most used languages</ResponseField>
+    <ResponseField name="busiestMonth" type="object">Month with most activity</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="hourlyActivity" type="Record<string, number>">
+  Commits by hour of day (keys: "0" to "23")
+</ResponseField>
+
+<ResponseField name="dailyActivity" type="Record<string, number>">
+  Commits by day of week (keys: "Sunday" to "Saturday")
+</ResponseField>
+
+<ResponseField name="streak" type="object">
+  Contribution streak statistics
+  
+  <Expandable title="properties">
+    <ResponseField name="longest" type="number">
+      Longest consecutive days with contributions
+    </ResponseField>
+    <ResponseField name="totalActiveDays" type="number">
+      Total days with at least one contribution
+    </ResponseField>
+    <ResponseField name="mostActiveDay" type="object">
+      Single day with most contributions
+      <Expandable title="properties">
+        <ResponseField name="date" type="string">ISO date (e.g., "2024-03-15")</ResponseField>
+        <ResponseField name="count" type="number">Contribution count</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="monthly" type="MonthlySnapshot[]" optional>
+  Month-by-month activity breakdown
+</ResponseField>
+
+<ResponseField name="topRepos" type="array">
+  Most contributed repositories
+  
+  <Expandable title="array items">
+    <ResponseField name="name" type="string">Repository name</ResponseField>
+    <ResponseField name="owner.login" type="string">Repository owner username</ResponseField>
+    <ResponseField name="description" type="string | null">Repository description</ResponseField>
+    <ResponseField name="stars" type="number">Star count</ResponseField>
+    <ResponseField name="language" type="string | null">Primary language</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generatedAt" type="string">
+  ISO timestamp when data was generated
+</ResponseField>
+
+```typescript
+export interface UserWrappedData {
+  user: UserProfile;
+  year: number;
+  overview: {
+    totalCommits: number;
+    totalPRs: number;
+    totalIssues: number;
+    topLanguages: LanguageStats[];
+    busiestMonth: { month: string; count: number };
+  };
+  hourlyActivity: Record<string, number>; // "0" to "23"
+  dailyActivity: Record<string, number>; // "Sunday" to "Saturday"
+  streak: {
+    longest: number;
+    totalActiveDays: number;
+    mostActiveDay: { date: string; count: number };
+  };
+  monthly?: MonthlySnapshot[];
+  topRepos: {
+    name: string;
+    owner: { login: string };
+    description: string | null;
+    stars: number;
+    language: string | null;
+  }[];
+  generatedAt: string;
+}
+```
+
+## Cache Models
+
+### CacheEntry
+
+Internal cache structure (not exposed in API responses).
+
+<ResponseField name="data" type="WrappedData | UserWrappedData">
+  Cached wrapped data
+</ResponseField>
+
+<ResponseField name="expiresAt" type="number">
+  Unix timestamp when cache entry expires
+</ResponseField>
+
+```typescript
+export interface CacheEntry {
+  data: WrappedData | UserWrappedData;
+  expiresAt: number;
+}
+```
+
+## Type Usage Examples
+
+### TypeScript Client
+
+```typescript
+import type { WrappedData, UserWrappedData, RepositoryInfo } from '@/types';
+
+async function fetchRepositoryWrapped(
+  owner: string,
+  repo: string,
+  year: number
+): Promise<WrappedData> {
+  const response = await fetch(
+    `/api/wrapped?owner=${owner}&repo=${repo}&year=${year}`
+  );
+  const { data } = await response.json();
+  return data as WrappedData;
+}
+
+async function fetchUserWrapped(
+  username: string,
+  year: number
+): Promise<UserWrappedData> {
+  const response = await fetch(
+    `/api/wrapped/user?username=${username}&year=${year}`
+  );
+  const { data } = await response.json();
+  return data as UserWrappedData;
+}
+```
+
+### React Component with Types
+
+```typescript
+import type { UserWrappedData } from '@/types';
+import { useState, useEffect } from 'react';
+
+function UserDashboard({ username }: { username: string }) {
+  const [data, setData] = useState<UserWrappedData | null>(null);
+  
+  useEffect(() => {
+    fetch(`/api/wrapped/user?username=${username}&year=2024`)
+      .then(r => r.json())
+      .then(result => setData(result.data));
+  }, [username]);
+  
+  if (!data) return <div>Loading...</div>;
+  
+  return (
+    <div>
+      <h1>{data.user.name || data.user.username}</h1>
+      <p>Commits: {data.overview.totalCommits}</p>
+      <p>Longest streak: {data.streak.longest} days</p>
+    </div>
+  );
+}
+```
+
+## Source Code
+
+All interfaces: `types/index.ts`
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="chart-line" href="/api/wrapped">
+    See WrappedData in action
+  </Card>
+  <Card title="User Wrapped" icon="user" href="/api/user-wrapped">
+    See UserWrappedData in action
+  </Card>
+  <Card title="API Overview" icon="book" href="/api/overview">
+    General API documentation
+  </Card>
+</CardGroup>

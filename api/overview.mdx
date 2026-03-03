@@ -1,0 +1,127 @@
+---
+title: API Overview
+description: Complete reference for GitHub Wrapped API endpoints
+---
+
+The GitHub Wrapped API provides programmatic access to generate year-in-review analytics for GitHub repositories and users.
+
+## Base URL
+
+All API endpoints are relative to your deployment base URL:
+
+```
+https://your-domain.com/api
+```
+
+## Request Format
+
+All requests use standard HTTP methods and accept parameters via:
+- **GET requests**: Query parameters in the URL
+- **POST requests**: JSON body (where applicable)
+
+Most endpoints use GET requests with query parameters.
+
+## Response Format
+
+All API responses return JSON with the following structure:
+
+```json
+{
+  "data": { ... },
+  "cached": false
+}
+```
+
+For errors:
+
+```json
+{
+  "error": "Error message",
+  "message": "Detailed error description"
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|-------------|-------------|
+| `200` | Success |
+| `400` | Bad Request - Invalid parameters |
+| `401` | Unauthorized - Authentication required |
+| `404` | Not Found - Repository or user doesn't exist |
+| `429` | Rate Limited - GitHub API rate limit exceeded |
+| `500` | Internal Server Error |
+
+### Rate Limiting
+
+The API respects GitHub's rate limits:
+- **Authenticated requests**: 5,000 requests/hour
+- **Unauthenticated requests**: 60 requests/hour
+
+Rate limit responses include a `resetAt` timestamp:
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "resetAt": "2026-03-03T12:00:00Z"
+}
+```
+
+## Caching
+
+Public repository data is cached for 24 hours. Cached responses include `"cached": true` in the response.
+
+Private repository data is never cached when accessed with an `accessToken`.
+
+## Quick Reference
+
+### Repository Endpoints
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/wrapped` | GET | Generate repository year-in-review | Optional* |
+| `/api/validate` | GET | Validate repository exists | Optional* |
+
+### User Endpoints
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/api/wrapped/user` | GET | Generate user year-in-review | Optional* |
+| `/api/performance` | GET | Get authenticated user performance | Yes |
+| `/api/summary` | GET | Get authenticated user monthly summary | Yes |
+| `/api/user/repos` | GET | List authenticated user repositories | Yes |
+
+**Optional with limitations*: Public data accessible without auth, private data requires authentication.
+
+### Authentication Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/*` | GET/POST | Better Auth OAuth handlers |
+
+See the [Authentication](/api/authentication) page for details on the OAuth flow.
+
+## Example Request
+
+```bash
+curl "https://your-domain.com/api/wrapped?owner=vercel&repo=next.js&year=2024"
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn about GitHub OAuth integration
+  </Card>
+  <Card title="Repository Wrapped" icon="chart-line" href="/api/wrapped">
+    Generate repository analytics
+  </Card>
+  <Card title="User Wrapped" icon="user" href="/api/user-wrapped">
+    Generate user activity analytics
+  </Card>
+  <Card title="Data Models" icon="database" href="/api/data-models">
+    TypeScript interfaces and data structures
+  </Card>
+</CardGroup>

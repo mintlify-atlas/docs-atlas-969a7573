@@ -1,0 +1,112 @@
+---
+title: "Introduction"
+description: "Create beautiful, Spotify-inspired year-in-review visualizations for GitHub repositories and users"
+---
+
+<Frame>
+  <img src="/images/hero.png" alt="GitHub Wrapped Example" />
+</Frame>
+
+## What is GitHub Wrapped?
+
+GitHub Wrapped is a web application that transforms your GitHub repository data into a beautiful, shareable story. Inspired by Spotify Wrapped, it creates an engaging visual presentation of your repository's year in code - from commits and contributors to languages and community growth.
+
+Every commit, every pull request, every late-night push - all wrapped up in one funky story you can share with your team or the world.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="code-branch" href="/features/repository-wrapped">
+    Get comprehensive analytics for any public repository including commits, contributors, languages, and community growth
+  </Card>
+  
+  <Card title="User Wrapped" icon="user" href="/features/user-wrapped">
+    Generate a personal year-in-review showcasing your GitHub activity, contributions, and coding patterns
+  </Card>
+  
+  <Card title="Beautiful Analytics" icon="chart-line" href="/features/analytics">
+    View detailed insights with Spotify-inspired animations including top contributors, language breakdowns, and activity patterns
+  </Card>
+  
+  <Card title="Easy Sharing" icon="share-nodes" href="/features/sharing">
+    Share your wrapped story on social media with one click or copy the link to send to your team
+  </Card>
+</CardGroup>
+
+## How It Works
+
+GitHub Wrapped uses the GitHub REST API to fetch repository data and transforms it into an animated story presentation:
+
+1. **Enter a Repository** - Input any public GitHub repository in the format `owner/repo` or paste a full GitHub URL
+2. **Select a Year** - Choose any year from 2008 onwards to analyze
+3. **Generate Wrapped** - The app fetches data from GitHub and calculates comprehensive analytics
+4. **Experience the Story** - Navigate through 8-12 animated slides showcasing your repository's journey
+5. **Share Your Story** - Post to Twitter, copy the link, or share with your community
+
+<Note>
+  **Sign in with GitHub** to view wrapped stories for private repositories and get personalized repository suggestions.
+</Note>
+
+## What's Included in Your Wrapped?
+
+Each wrapped story includes:
+
+- **Total Commits** - Every push that shaped your project
+- **Top Contributors** - The MVPs who made it happen
+- **Community Growth** - Stars, forks, and new contributors
+- **Busiest Months** - When the magic happened
+- **Language Breakdown** - What powers your project
+- **Major Releases** - Milestones that matter
+- **Activity Patterns** - Night owl hours and weekend warrior stats
+- **Year Summary** - All your achievements in one view
+
+## Performance & Caching
+
+GitHub Wrapped is designed for speed:
+
+- **24-hour caching** for popular repositories - instant results
+- **Smart API batching** - efficient data fetching
+- **Progressive loading** - see results as they're calculated
+- **< 3 seconds** load time for cached repositories
+- **< 10 seconds** for uncached small-to-medium repositories
+
+<Tip>
+  The first person to generate a wrapped for a repository might wait a bit longer, but everyone after them gets instant results for 24 hours!
+</Tip>
+
+## Tech Stack
+
+Built with modern web technologies:
+
+- **Next.js 16** with App Router for server-side rendering
+- **TypeScript** for type safety
+- **Framer Motion** for smooth animations
+- **Tailwind CSS** for beautiful, responsive design
+- **Octokit** for GitHub API integration
+- **In-memory caching** with 24-hour TTL
+
+## API Rate Limits
+
+GitHub Wrapped respects GitHub's API rate limits:
+
+- **Unauthenticated**: 60 requests per hour
+- **Authenticated** (with GitHub sign-in): 5,000 requests per hour
+
+The app includes rate limit checking, caching to reduce API calls, and graceful error handling if limits are exceeded.
+
+<Card title="Get Started" icon="rocket" href="/quickstart" horizontal>
+  Ready to create your first wrapped? Follow our quickstart guide.
+</Card>
+
+## Open Source
+
+GitHub Wrapped is open source and built with love for the developer community. Contributions are welcome!
+
+<Card 
+  title="View on GitHub" 
+  icon="github" 
+  href="https://github.com/PhumudzoSly/github-wrapped"
+  horizontal
+>
+  Star the repository, report issues, or contribute to the project.
+</Card>

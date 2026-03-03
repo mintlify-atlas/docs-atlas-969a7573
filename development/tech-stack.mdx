@@ -1,0 +1,363 @@
+---
+title: 'Tech Stack'
+description: 'Complete overview of technologies powering GitHub Wrapped'
+icon: 'layer-group'
+---
+
+## Framework & Runtime
+
+<CardGroup cols={2}>
+  <Card title="Next.js 16" icon="react" href="https://nextjs.org">
+    Modern React framework with App Router for server and client components, API routes, and optimized rendering.
+    
+    **Version**: `16.0.7`
+  </Card>
+  
+  <Card title="React 19" icon="react" href="https://react.dev">
+    Latest React with improved concurrent features, server components, and automatic batching.
+    
+    **Version**: `19.2.0`
+  </Card>
+  
+  <Card title="TypeScript 5" icon="code" href="https://typescriptlang.org">
+    Type-safe development with full IDE support and compile-time error checking.
+    
+    **Version**: `^5`
+  </Card>
+  
+  <Card title="Node.js 18+" icon="node-js">
+    Modern JavaScript runtime with native ESM support and enhanced performance.
+    
+    **Minimum**: Node.js 18 or higher
+  </Card>
+</CardGroup>
+
+## Styling & UI
+
+<CardGroup cols={3}>
+  <Card title="Tailwind CSS 4" icon="palette" href="https://tailwindcss.com">
+    Utility-first CSS framework for rapid UI development with custom configuration.
+    
+    - `tailwindcss@^4`
+    - `@tailwindcss/postcss@^4`
+    - `tailwindcss-animate@^1.0.7`
+  </Card>
+  
+  <Card title="Radix UI" icon="component" href="https://radix-ui.com">
+    Unstyled, accessible component primitives:
+    
+    - Accordion, Alert Dialog, Avatar
+    - Dialog, Dropdown Menu, Popover
+    - Select, Tabs, Tooltip
+    - 20+ components total
+  </Card>
+  
+  <Card title="Framer Motion" icon="sparkles" href="https://framer.com/motion">
+    Production-ready animation library for smooth, physics-based animations.
+    
+    **Version**: `^12.23.25`
+  </Card>
+  
+  <Card title="next-themes" icon="moon" href="https://github.com/pacocoursey/next-themes">
+    Perfect dark mode support with system preference detection.
+    
+    **Version**: `^0.4.6`
+  </Card>
+  
+  <Card title="Lucide React" icon="icons" href="https://lucide.dev">
+    Beautiful, consistent icon library with 1000+ icons.
+    
+    **Version**: `^0.556.0`
+  </Card>
+  
+  <Card title="Utility Libraries" icon="wrench">
+    - `class-variance-authority@^0.7.1` - Type-safe component variants
+    - `tailwind-merge@^3.4.0` - Intelligent class merging
+    - `clsx@^2.1.1` - Conditional classNames
+  </Card>
+</CardGroup>
+
+## Data & APIs
+
+<CardGroup cols={2}>
+  <Card title="GitHub API (Octokit)" icon="github" href="https://github.com/octokit/rest.js">
+    Official GitHub REST API client for fetching repository data, commits, contributors, and more.
+    
+    **Package**: `@octokit/rest@^22.0.1`
+    
+    **Features**:
+    - Automatic rate limit handling
+    - Pagination support
+    - Type-safe request/response
+    - OAuth authentication
+  </Card>
+  
+  <Card title="date-fns" icon="calendar" href="https://date-fns.org">
+    Modern date utility library for date manipulation and formatting.
+    
+    **Version**: `^4.1.0`
+    
+    **Usage**:
+    - Date range calculations
+    - Time-series bucketing
+    - Human-readable formatting
+  </Card>
+</CardGroup>
+
+## Caching & Performance
+
+<CardGroup cols={2}>
+  <Card title="Upstash Redis" icon="database" href="https://upstash.com">
+    Serverless Redis for distributed caching with automatic scaling.
+    
+    **Package**: `@upstash/redis@^1.35.7`
+    
+    **Configuration**:
+    - 24-hour TTL for wrapped data
+    - Automatic fallback to in-memory cache
+    - REST-based (no persistent connections)
+  </Card>
+  
+  <Card title="In-Memory Cache" icon="memory">
+    Map-based fallback cache for development and environments without Redis.
+    
+    **Implementation**: `lib/cache.ts`
+    
+    - Same 24-hour expiration
+    - Type-safe cache entries
+    - Automatic cleanup
+  </Card>
+</CardGroup>
+
+## Authentication & Database
+
+<CardGroup cols={2}>
+  <Card title="better-auth" icon="shield-check" href="https://better-auth.com">
+    Modern, type-safe authentication library for Next.js.
+    
+    **Version**: `^1.4.5`
+    
+    **Features**:
+    - GitHub OAuth integration
+    - Session management
+    - Type-safe auth hooks
+    - Minimal configuration
+  </Card>
+  
+  <Card title="PostgreSQL + Prisma" icon="database" href="https://prisma.io">
+    Type-safe database client and schema management.
+    
+    **Packages**:
+    - `prisma@^7.1.0`
+    - `@prisma/client@^7.1.0`
+    - `@prisma/adapter-pg@^7.1.0`
+    - `pg@^8.16.3`
+    
+    **Usage**: Auth session storage
+  </Card>
+</CardGroup>
+
+## Forms & Validation
+
+<CardGroup cols={2}>
+  <Card title="React Hook Form" icon="edit" href="https://react-hook-form.com">
+    Performant form library with minimal re-renders.
+    
+    **Version**: `^7.68.0`
+    
+    **Features**:
+    - Uncontrolled form inputs
+    - Built-in validation
+    - TypeScript support
+  </Card>
+  
+  <Card title="Zod" icon="shield-check" href="https://zod.dev">
+    TypeScript-first schema validation library.
+    
+    **Version**: `^4.1.13`
+    
+    **Usage**:
+    - API request validation
+    - Form schema validation
+    - Type inference
+    
+    **Integration**: `@hookform/resolvers@^5.2.2`
+  </Card>
+</CardGroup>
+
+## Visualization & Charts
+
+<CardGroup cols={2}>
+  <Card title="Recharts" icon="chart-line" href="https://recharts.org">
+    Composable charting library built on React components.
+    
+    **Version**: `^2.15.4`
+    
+    **Chart Types**:
+    - Line charts (commit activity)
+    - Bar charts (language distribution)
+    - Area charts (monthly trends)
+    - Pie charts (contributor breakdown)
+  </Card>
+  
+  <Card title="Framer Motion" icon="sparkles">
+    Also used for animated transitions between slides and number counters.
+    
+    **Slide Animations**:
+    - Fade in/out transitions
+    - Slide entrance animations
+    - Stagger effects
+    - Number count-up animations
+  </Card>
+</CardGroup>
+
+## UI Component Libraries
+
+<Accordion title="Radix UI Components (Complete List)">
+  The following Radix UI primitives are installed:
+  
+  - `@radix-ui/react-accordion@^1.2.12`
+  - `@radix-ui/react-alert-dialog@^1.1.15`
+  - `@radix-ui/react-aspect-ratio@^1.1.8`
+  - `@radix-ui/react-avatar@^1.1.11`
+  - `@radix-ui/react-checkbox@^1.3.3`
+  - `@radix-ui/react-collapsible@^1.1.12`
+  - `@radix-ui/react-context-menu@^2.2.16`
+  - `@radix-ui/react-dialog@^1.1.15`
+  - `@radix-ui/react-dropdown-menu@^2.1.16`
+  - `@radix-ui/react-hover-card@^1.1.15`
+  - `@radix-ui/react-label@^2.1.8`
+  - `@radix-ui/react-menubar@^1.1.16`
+  - `@radix-ui/react-navigation-menu@^1.2.14`
+  - `@radix-ui/react-popover@^1.1.15`
+  - `@radix-ui/react-progress@^1.1.8`
+  - `@radix-ui/react-radio-group@^1.3.8`
+  - `@radix-ui/react-scroll-area@^1.2.10`
+  - `@radix-ui/react-select@^2.2.6`
+  - `@radix-ui/react-separator@^1.1.8`
+  - `@radix-ui/react-slider@^1.3.6`
+  - `@radix-ui/react-slot@^1.2.4`
+  - `@radix-ui/react-switch@^1.2.6`
+  - `@radix-ui/react-tabs@^1.1.13`
+  - `@radix-ui/react-toggle@^1.1.10`
+  - `@radix-ui/react-toggle-group@^1.1.11`
+  - `@radix-ui/react-tooltip@^1.2.8`
+</Accordion>
+
+<Accordion title="Additional UI Components">
+  - `cmdk@^1.1.1` - Command menu (⌘K interface)
+  - `embla-carousel-react@^8.6.0` - Carousel component
+  - `input-otp@^1.4.2` - OTP input component
+  - `react-day-picker@^9.12.0` - Date picker
+  - `react-resizable-panels@^3.0.6` - Resizable panel layouts
+  - `sonner@^2.0.7` - Toast notifications
+  - `vaul@^1.1.2` - Drawer component
+</Accordion>
+
+## Open Graph & Meta
+
+<Card title="@vercel/og" icon="image" href="https://vercel.com/docs/functions/og-image-generation">
+  Dynamic Open Graph image generation for social media sharing.
+  
+  **Version**: `^0.8.5`
+  
+  **Usage**: `/api/og` route generates custom OG images with repository stats
+</Card>
+
+## Development Tools
+
+<CardGroup cols={2}>
+  <Card title="ESLint" icon="bug" href="https://eslint.org">
+    Code linting and formatting enforcement.
+    
+    **Packages**:
+    - `eslint@^9`
+    - `eslint-config-next@16.0.7`
+    
+    **Config**: `eslint.config.mjs`
+  </Card>
+  
+  <Card title="Build Tools" icon="hammer">
+    **PostCSS**: CSS processing
+    - `postcss.config.mjs`
+    
+    **TypeScript**: Type checking
+    - `tsconfig.json`
+    
+    **Next.js Config**: `next.config.ts`
+  </Card>
+</CardGroup>
+
+## Environment Variables
+
+<CodeGroup>
+```bash Optional - GitHub API
+GITHUB_TOKEN=ghp_your_token_here
+# Increases rate limit from 60/hour to 5,000/hour
+```
+
+```bash Optional - Redis Cache
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_token_here
+# Falls back to in-memory cache if not configured
+```
+
+```bash Required - Database (for auth)
+DATABASE_URL=postgresql://user:pass@host:5432/db
+# Required for better-auth session storage
+```
+
+```bash Required - Auth
+BETTER_AUTH_SECRET=your_secret_here
+BETTER_AUTH_URL=http://localhost:3000
+# Or your production URL
+```
+</CodeGroup>
+
+## Package Manager
+
+The project uses **pnpm** for faster installs and better disk efficiency:
+
+```bash
+pnpm install    # Install dependencies
+pnpm dev        # Start dev server
+pnpm build      # Production build
+pnpm start      # Start production server
+pnpm lint       # Run ESLint
+```
+
+<Note>
+  While pnpm is recommended, the project also works with npm or yarn.
+</Note>
+
+## Browser Support
+
+The application targets modern browsers:
+
+- Chrome/Edge (latest 2 versions)
+- Firefox (latest 2 versions)
+- Safari (latest 2 versions)
+- Mobile browsers (iOS Safari, Chrome Android)
+
+## Production Deployment
+
+<CardGroup cols={2}>
+  <Card title="Vercel" icon="triangle" href="https://vercel.com">
+    Optimized for Vercel deployment with automatic:
+    - Static optimization
+    - Edge function deployment
+    - Image optimization
+    - Analytics
+  </Card>
+  
+  <Card title="Docker" icon="docker">
+    Can also be containerized:
+    - Standard Next.js standalone build
+    - Multi-stage Docker builds
+    - Environment-based configuration
+  </Card>
+</CardGroup>
+
+<Tip>
+  Check [package.json](https://github.com/yourusername/github-wrapped/blob/main/package.json) for the most up-to-date dependency versions.
+</Tip>

@@ -1,0 +1,356 @@
+---
+title: Sharing Features
+description: Share your GitHub Wrapped visualizations on social media and generate Open Graph images
+---
+
+# Sharing Features
+
+GitHub Wrapped includes built-in sharing capabilities to help users showcase their year-in-code achievements on social media and share links with friends and colleagues.
+
+## Social Media Sharing
+
+### Twitter/X Integration
+
+Every wrapped visualization includes a dedicated "Share on X" button that opens a pre-populated tweet.
+
+**Implementation** (`components/WrappedSlide.tsx:1225-1236`):
+
+```typescript
+href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+  `Check out ${data.repository.name}'s ${data.year} Wrapped! 🎉`
+)}&url=${encodeURIComponent(
+  typeof window !== "undefined" ? window.location.href : ""
+)}`}
+```
+
+**User Experience**:
+1. User clicks "Share on X" button on the final slide
+2. Opens Twitter in a new tab with pre-filled tweet
+3. Tweet includes:
+   - Custom message with repository name and year
+   - Direct link to the wrapped visualization
+   - Celebratory emoji
+
+### Tweet Customization
+
+<Tabs>
+  <Tab title="Repository Wrapped">
+    ```typescript
+    `Check out ${data.repository.name}'s ${data.year} Wrapped! 🎉`
+    ```
+    
+    Example: "Check out facebook/react's 2024 Wrapped! 🎉"
+  </Tab>
+  
+  <Tab title="User Wrapped">
+    ```typescript
+    `Check out my ${data.year} GitHub Wrapped! 🚀`
+    ```
+    
+    Example: "Check out my 2024 GitHub Wrapped! 🚀"
+  </Tab>
+</Tabs>
+
+**Styling**:
+- Blue background (#1DA1F2 - Twitter brand color)
+- White text
+- Hover animation (scale: 1.05)
+- Tap animation (scale: 0.95)
+- Shadow effect for depth
+
+## Link Copying
+
+### Clipboard API Integration
+
+The "Copy Link" button allows users to quickly copy the wrapped URL to their clipboard.
+
+**Implementation** (`components/WrappedSlide.tsx:1241-1246`):
+
+```typescript
+onClick={() => {
+  if (typeof window !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Link copied!");
+  }
+}}
+```
+
+**Features**:
+- Uses modern Clipboard API
+- Checks for browser support before attempting
+- Provides immediate feedback via alert
+- Copies current page URL
+
+**Styling**:
+- Border color matches slide theme
+- Text color matches slide theme
+- Hover and tap animations
+- Rounded full button style
+
+### Browser Compatibility
+
+<Info>
+The Clipboard API requires a secure context (HTTPS) in production. The code includes safety checks to gracefully handle unsupported browsers.
+</Info>
+
+**Fallback Behavior**:
+If `navigator.clipboard` is unavailable, the button click has no effect. Consider implementing a fallback:
+
+```typescript
+// Potential enhancement
+if (navigator.clipboard) {
+  navigator.clipboard.writeText(url);
+} else {
+  // Fallback: select text in hidden input
+  const input = document.createElement('input');
+  input.value = url;
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  document.body.removeChild(input);
+}
+```
+
+## Open Graph Image Generation
+
+GitHub Wrapped automatically generates Open Graph (OG) images for rich social media previews.
+
+### OG Image Endpoint
+
+**Route**: `/api/og/route.tsx`
+
+**Runtime**: Edge (Vercel)
+
+```typescript
+export const runtime = 'edge';
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const owner = searchParams.get('owner') || '';
+  const repo = searchParams.get('repo') || '';
+  const year = searchParams.get('year') || new Date().getFullYear().toString();
+  
+  return new ImageResponse(/* ... */);
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `owner` | string | Yes | Repository owner username |
+| `repo` | string | Yes | Repository name |
+| `year` | string | No | Year (defaults to current year) |
+
+**Example URL**:
+```
+https://yourapp.com/api/og?owner=facebook&repo=react&year=2024
+```
+
+### Image Design
+
+The OG image features:
+
+#### Dimensions
+- **Width**: 1200px
+- **Height**: 630px
+- Optimized for Twitter, Facebook, LinkedIn
+
+#### Visual Elements
+
+<CardGroup cols={2}>
+  <Card title="Background" icon="paint-brush">
+    - Dark theme (zinc-950: #09090b)
+    - Radial gradient overlay
+    - Subtle grid pattern (50px squares)
+  </Card>
+  
+  <Card title="Content Card" icon="square">
+    - Centered card with border
+    - Semi-transparent background
+    - Rounded corners (30px)
+    - Drop shadow for depth
+  </Card>
+  
+  <Card title="GitHub Icon" icon="github">
+    - SVG icon (48x48px)
+    - Stroke-based design
+    - Positioned next to "GitHub Wrapped" text
+  </Card>
+  
+  <Card title="Typography" icon="font">
+    - Large repository name (72px, bold)
+    - Year badge with pill styling
+    - "GitHub Wrapped" branding
+  </Card>
+</CardGroup>
+
+#### Color Scheme
+
+```css
+background: #09090b (zinc-950)
+gradient: radial-gradient(circle at 50% 0%, #27272a 0%, #09090b 75%)
+text: #ffffff (white)
+accent: #e4e4e7 (zinc-200)
+border: #3f3f46 (zinc-700)
+```
+
+### Implementation Using @vercel/og
+
+```typescript
+import { ImageResponse } from '@vercel/og';
+
+return new ImageResponse(
+  (
+    <div style={{ /* styles */ }}>
+      {/* SVG icon */}
+      <svg>...</svg>
+      
+      {/* Repository name */}
+      <div>{owner}/{repo}</div>
+      
+      {/* Year badge */}
+      <div>{year} Year in Review</div>
+    </div>
+  ),
+  {
+    width: 1200,
+    height: 630,
+  }
+);
+```
+
+<Note>
+The `@vercel/og` library uses Satori under the hood to convert React components to SVG, then to PNG. It supports a subset of CSS and HTML.
+</Note>
+
+## Meta Tags Integration
+
+### Repository Wrapped Metadata
+
+The wrapped page automatically includes rich meta tags (`app/wrapped/[owner]/[repo]/[year]/page.tsx:91-134`):
+
+```typescript
+export async function generateMetadata({ params }: PageProps) {
+  const { owner, repo, year } = await params;
+  const title = `${owner}/${repo} - ${year} Wrapped`;
+  const description = `Check out ${owner}/${repo}'s ${year} GitHub Wrapped! See commits, contributors, growth, and more.`;
+  
+  const ogImage = new URL(
+    `/api/og?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}&year=${year}`,
+    baseUrl
+  ).toString();
+  
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: pageUrl,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
+```
+
+### Rendered HTML
+
+This generates the following meta tags:
+
+```html
+<!-- Open Graph -->
+<meta property="og:title" content="facebook/react - 2024 Wrapped" />
+<meta property="og:description" content="Check out facebook/react's 2024 GitHub Wrapped!" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://yourapp.com/wrapped/facebook/react/2024" />
+<meta property="og:image" content="https://yourapp.com/api/og?owner=facebook&repo=react&year=2024" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="facebook/react - 2024 Wrapped" />
+<meta name="twitter:description" content="Check out facebook/react's 2024 GitHub Wrapped!" />
+<meta name="twitter:image" content="https://yourapp.com/api/og?owner=facebook&repo=react&year=2024" />
+```
+
+### Social Media Previews
+
+<Tabs>
+  <Tab title="Twitter/X">
+    - Uses `summary_large_image` card type
+    - Displays 1200x630 image
+    - Shows title and description below image
+    - Includes site name if configured
+  </Tab>
+  
+  <Tab title="Facebook">
+    - Reads `og:*` meta tags
+    - Shows large image preview
+    - Displays title and description
+    - Includes domain name
+  </Tab>
+  
+  <Tab title="LinkedIn">
+    - Uses Open Graph tags
+    - Large image preview
+    - Professional appearance
+    - Shows title and description
+  </Tab>
+  
+  <Tab title="Slack/Discord">
+    - Automatic unfurling of links
+    - Shows OG image
+    - Displays title as link
+    - Includes description text
+  </Tab>
+</Tabs>
+
+## Share Button Positioning
+
+Sharing options appear on the **final slide** of both repository and user wrapped stories.
+
+**Layout**:
+```typescript
+<div className="flex flex-col sm:flex-row gap-6 w-full max-w-lg">
+  <a href="twitter://..." className="flex-1">
+    Share on X
+  </a>
+  
+  <button onClick={copyLink} className="flex-1">
+    Copy Link
+  </button>
+</div>
+```
+
+**Responsive Design**:
+- Mobile (< 640px): Stacked vertically
+- Desktop: Side-by-side
+- Equal flex distribution
+- Consistent gap spacing
+
+## Future Enhancements
+
+<CardGroup cols={2}>
+  <Card title="More Platforms" icon="share-nodes">
+    Add LinkedIn, Reddit, Hacker News sharing buttons
+  </Card>
+  
+  <Card title="Custom OG Images" icon="image">
+    Generate personalized OG images with actual stats
+  </Card>
+  
+  <Card title="Download as Image" icon="download">
+    Export wrapped slides as PNG/SVG
+  </Card>
+  
+  <Card title="Embed Codes" icon="code">
+    Provide iframe embeds for websites/blogs
+  </Card>
+</CardGroup>

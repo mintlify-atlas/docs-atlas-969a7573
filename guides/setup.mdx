@@ -1,0 +1,202 @@
+---
+title: Self-Hosting Setup
+description: Learn how to self-host GitHub Wrapped on your own infrastructure
+---
+
+GitHub Wrapped is a Next.js application that you can easily self-host on your own server or platform. Follow this guide to get your instance up and running.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js 18+** - [Download Node.js](https://nodejs.org/)
+- **pnpm** - Install with `npm install -g pnpm` (or use npm/yarn)
+
+<Note>
+  While the documentation mentions pnpm, you can also use npm or yarn if you prefer. Just replace `pnpm` commands with your preferred package manager.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the GitHub Wrapped repository to your local machine:
+
+    ```bash
+    git clone https://github.com/your-org/github-wrapped.git
+    cd github-wrapped
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required dependencies using pnpm:
+
+    ```bash
+    pnpm install
+    ```
+
+    This will install all packages including:
+    - Next.js 16 (App Router)
+    - TypeScript
+    - Tailwind CSS
+    - Framer Motion for animations
+    - Octokit for GitHub API integration
+  </Step>
+
+  <Step title="Configure environment variables (optional)">
+    For basic usage, no environment variables are required. However, for production deployments, you may want to configure:
+
+    - `GITHUB_TOKEN` - For higher API rate limits
+    - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` - For distributed caching
+
+    See the [Environment Variables](/guides/environment-variables) guide for details.
+  </Step>
+
+  <Step title="Start the development server">
+    Run the development server:
+
+    ```bash
+    pnpm dev
+    ```
+
+    The application will be available at [http://localhost:3000](http://localhost:3000)
+  </Step>
+</Steps>
+
+## Building for Production
+
+When you're ready to deploy to production, build the optimized production bundle:
+
+<CodeGroup>
+```bash Build
+pnpm build
+```
+
+```bash Start Production Server
+pnpm start
+```
+</CodeGroup>
+
+The build process:
+1. Compiles TypeScript to JavaScript
+2. Optimizes and minifies CSS with Tailwind
+3. Bundles and optimizes all client and server components
+4. Generates static pages where possible
+
+<Note>
+  The production build typically takes 1-3 minutes depending on your hardware.
+</Note>
+
+## Deployment Options
+
+GitHub Wrapped can be deployed to any platform that supports Next.js:
+
+### Vercel (Recommended)
+
+The easiest deployment option with zero configuration:
+
+1. Push your code to GitHub
+2. Import the project in [Vercel](https://vercel.com)
+3. Add environment variables in the Vercel dashboard
+4. Deploy!
+
+### Docker
+
+Create a `Dockerfile` in your project root:
+
+```dockerfile
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Build the application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+RUN npm install -g pnpm && pnpm build
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+
+CMD ["node", "server.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t github-wrapped .
+docker run -p 3000:3000 github-wrapped
+```
+
+### Other Platforms
+
+- **Railway** - Connect your GitHub repo and deploy
+- **Render** - Supports Node.js applications with automatic deployments
+- **DigitalOcean App Platform** - Deploy directly from GitHub
+- **AWS Amplify** - Full CI/CD pipeline with AWS integration
+
+## Performance Optimization
+
+For production deployments, consider:
+
+- **Enable caching** - Configure Redis for distributed caching (see [Caching guide](/guides/caching))
+- **Add a CDN** - Use Vercel's edge network or Cloudflare for static assets
+- **Configure rate limits** - Set up a `GITHUB_TOKEN` to increase API limits (see [Rate Limits guide](/guides/rate-limits))
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with TypeScript errors">
+    Ensure you're using Node.js 18 or higher and have all dependencies installed:
+    
+    ```bash
+    node --version
+    pnpm install --frozen-lockfile
+    ```
+  </Accordion>
+
+  <Accordion title="Port 3000 already in use">
+    Change the port by setting the `PORT` environment variable:
+    
+    ```bash
+    PORT=3001 pnpm dev
+    ```
+  </Accordion>
+
+  <Accordion title="GitHub API rate limit exceeded">
+    Add a `GITHUB_TOKEN` to your environment variables. See the [Rate Limits guide](/guides/rate-limits) for details.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+- Configure [environment variables](/guides/environment-variables) for production
+- Learn about [rate limits](/guides/rate-limits) and how to avoid them
+- Set up [caching](/guides/caching) for better performance

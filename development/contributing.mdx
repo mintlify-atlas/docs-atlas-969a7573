@@ -1,0 +1,442 @@
+---
+title: 'Contributing Guide'
+description: 'How to contribute to GitHub Wrapped development'
+icon: 'code-pull-request'
+---
+
+## Welcome Contributors!
+
+Thank you for your interest in contributing to GitHub Wrapped! This guide will help you get started with contributing code, reporting issues, and improving documentation.
+
+<Note>
+  GitHub Wrapped is an open-source project. All contributions are welcome, from bug fixes to new features!
+</Note>
+
+## Getting Started
+
+<Steps>
+  <Step title="Fork the Repository">
+    Click the "Fork" button on the [GitHub repository](https://github.com/yourusername/github-wrapped) to create your own copy.
+  </Step>
+  
+  <Step title="Clone Your Fork">
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/github-wrapped.git
+    cd github-wrapped
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    pnpm install
+    # or npm install / yarn install
+    ```
+  </Step>
+  
+  <Step title="Set Up Environment">
+    Copy the example environment file and configure it:
+    
+    ```bash
+    cp .env.example .env.local
+    ```
+    
+    Add your GitHub token for development:
+    ```bash
+    GITHUB_TOKEN=ghp_your_token_here
+    ```
+  </Step>
+  
+  <Step title="Start Development Server">
+    ```bash
+    pnpm dev
+    ```
+    
+    Visit [http://localhost:3000](http://localhost:3000)
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Creating a Feature Branch
+
+Always create a new branch for your work:
+
+```bash
+# Update main branch
+git checkout main
+git pull origin main
+
+# Create feature branch
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/bug-description
+```
+
+### Branch Naming Convention
+
+<CardGroup cols={2}>
+  <Card title="Features" icon="sparkles">
+    `feature/description`
+    
+    Examples:
+    - `feature/add-org-wrapped`
+    - `feature/export-pdf`
+    - `feature/custom-themes`
+  </Card>
+  
+  <Card title="Bug Fixes" icon="bug">
+    `fix/description`
+    
+    Examples:
+    - `fix/rate-limit-error`
+    - `fix/mobile-layout`
+    - `fix/cache-invalidation`
+  </Card>
+  
+  <Card title="Documentation" icon="book">
+    `docs/description`
+    
+    Examples:
+    - `docs/api-reference`
+    - `docs/contributing-guide`
+    - `docs/deployment-guide`
+  </Card>
+  
+  <Card title="Refactoring" icon="code">
+    `refactor/description`
+    
+    Examples:
+    - `refactor/analytics-engine`
+    - `refactor/component-structure`
+    - `refactor/type-definitions`
+  </Card>
+</CardGroup>
+
+### Making Changes
+
+1. **Write Clean Code**
+   - Follow TypeScript best practices
+   - Use meaningful variable names
+   - Add comments for complex logic
+   - Keep functions small and focused
+
+2. **Follow Project Structure**
+   - Components go in `/components`
+   - Business logic in `/lib`
+   - Types in `/types`
+   - API routes in `/app/api`
+
+3. **Maintain Type Safety**
+   ```typescript
+   // Good: Explicit types
+   const fetchData = async (owner: string, repo: string): Promise<WrappedData> => {
+     // ...
+   }
+   
+   // Avoid: Any types
+   const fetchData = async (owner: any, repo: any): Promise<any> => {
+     // ...
+   }
+   ```
+
+4. **Run Linting**
+   ```bash
+   pnpm lint
+   ```
+   
+   Fix any errors before committing.
+
+### Testing Your Changes
+
+While we don't have automated tests yet, please manually test:
+
+<Steps>
+  <Step title="Basic Functionality">
+    Test with multiple repositories:
+    - Small repos (< 100 commits)
+    - Medium repos (100-1000 commits)
+    - Large repos (1000+ commits)
+  </Step>
+  
+  <Step title="Edge Cases">
+    - Empty repositories
+    - Private repositories (should show error)
+    - Non-existent repositories
+    - Repositories with special characters
+  </Step>
+  
+  <Step title="UI/UX">
+    - Test on mobile devices
+    - Test dark/light mode
+    - Test keyboard navigation
+    - Check accessibility (screen reader friendly)
+  </Step>
+  
+  <Step title="Performance">
+    - Check API response times
+    - Verify caching works
+    - Monitor rate limit usage
+  </Step>
+</Steps>
+
+## Code Style Guidelines
+
+### TypeScript
+
+```typescript
+// Use explicit types for function parameters and return values
+function calculateStats(data: CommitData[]): CommitStats {
+  // ...
+}
+
+// Use interfaces for object shapes
+interface UserData {
+  username: string
+  avatar: string
+  stats: Stats
+}
+
+// Use type for unions and utilities
+type Status = 'loading' | 'success' | 'error'
+```
+
+### React Components
+
+```typescript
+// Use function components with TypeScript
+interface ButtonProps {
+  onClick: () => void
+  children: React.ReactNode
+  variant?: 'primary' | 'secondary'
+}
+
+export function Button({ onClick, children, variant = 'primary' }: ButtonProps) {
+  return (
+    <button onClick={onClick} className={cn('btn', `btn-${variant}`)}>
+      {children}
+    </button>
+  )
+}
+```
+
+### Styling
+
+```typescript
+// Use Tailwind CSS classes
+<div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-800">
+  {/* ... */}
+</div>
+
+// Use cn() utility for conditional classes
+import { cn } from '@/lib/utils'
+
+<button className={cn(
+  'px-4 py-2 rounded',
+  isActive && 'bg-blue-500',
+  isDisabled && 'opacity-50 cursor-not-allowed'
+)}>
+```
+
+### API Routes
+
+```typescript
+// Use Next.js App Router patterns
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    // ... process request
+    return NextResponse.json({ success: true, data })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+## Commit Message Guidelines
+
+Write clear, descriptive commit messages:
+
+### Format
+
+```
+type(scope): subject
+
+body (optional)
+
+footer (optional)
+```
+
+### Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, no logic change)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
+
+### Examples
+
+```bash
+feat(analytics): add language trend analysis
+
+feat(ui): add dark mode toggle to navbar
+
+fix(cache): resolve Redis connection timeout
+
+docs(readme): update installation instructions
+
+refactor(github): simplify rate limit handling
+```
+
+## Pull Request Process
+
+<Steps>
+  <Step title="Create Pull Request">
+    1. Push your branch to GitHub
+    2. Click "New Pull Request" on GitHub
+    3. Select your branch as the source
+    4. Fill out the PR template
+  </Step>
+  
+  <Step title="Write a Clear Description">
+    Include:
+    - What changes were made
+    - Why the changes were necessary
+    - How to test the changes
+    - Screenshots (for UI changes)
+    - Related issues (if any)
+  </Step>
+  
+  <Step title="Wait for Review">
+    Maintainers will review your PR and may:
+    - Request changes
+    - Ask questions
+    - Approve and merge
+    
+    Please be patient and responsive to feedback.
+  </Step>
+  
+  <Step title="Address Feedback">
+    Make requested changes in new commits:
+    
+    ```bash
+    # Make changes
+    git add .
+    git commit -m "address review feedback"
+    git push
+    ```
+  </Step>
+  
+  <Step title="Merge">
+    Once approved, a maintainer will merge your PR.
+    
+    Congratulations! You're now a contributor!
+  </Step>
+</Steps>
+
+## PR Template
+
+When creating a pull request, use this template:
+
+```markdown
+## Description
+<!-- Brief description of what this PR does -->
+
+## Changes Made
+- [ ] Change 1
+- [ ] Change 2
+- [ ] Change 3
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Testing
+<!-- How did you test these changes? -->
+
+## Screenshots (if applicable)
+<!-- Add screenshots for UI changes -->
+
+## Related Issues
+Closes #123
+```
+
+## Reporting Issues
+
+Found a bug or have a feature request?
+
+<CardGroup cols={2}>
+  <Card title="Bug Reports" icon="bug">
+    **Include:**
+    - Clear description
+    - Steps to reproduce
+    - Expected vs actual behavior
+    - Screenshots/error messages
+    - Environment (browser, OS)
+    
+    [Report a bug →](https://github.com/yourusername/github-wrapped/issues/new?template=bug_report.md)
+  </Card>
+  
+  <Card title="Feature Requests" icon="lightbulb">
+    **Include:**
+    - Clear description of the feature
+    - Use case / motivation
+    - Proposed implementation (optional)
+    - Examples from other tools
+    
+    [Request a feature →](https://github.com/yourusername/github-wrapped/issues/new?template=feature_request.md)
+  </Card>
+</CardGroup>
+
+## Code Review Expectations
+
+When reviewing PRs, we look for:
+
+- **Functionality**: Does it work as intended?
+- **Code Quality**: Is it readable and maintainable?
+- **Type Safety**: Are types properly defined?
+- **Performance**: Does it impact load times?
+- **Accessibility**: Is it keyboard/screen reader friendly?
+- **Documentation**: Are complex parts documented?
+
+## Getting Help
+
+Need help with your contribution?
+
+<CardGroup cols={3}>
+  <Card title="GitHub Discussions" icon="comments">
+    Ask questions and discuss ideas.
+  </Card>
+  
+  <Card title="Discord" icon="discord">
+    Join our community chat.
+  </Card>
+  
+  <Card title="Issues" icon="circle-question">
+    Tag your issue with `question`.
+  </Card>
+</CardGroup>
+
+## Recognition
+
+All contributors will be:
+
+- Listed in the project README
+- Mentioned in release notes
+- Added to the contributors graph
+
+Thank you for making GitHub Wrapped better!
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.

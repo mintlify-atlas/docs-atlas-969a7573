@@ -1,0 +1,495 @@
+---
+title: 'Local Development'
+description: 'Set up your development environment and run GitHub Wrapped locally'
+icon: 'laptop-code'
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Node.js 18+" icon="node-js" href="https://nodejs.org">
+    JavaScript runtime required for Next.js.
+    
+    **Check version:**
+    ```bash
+    node --version
+    # Should output v18.x.x or higher
+    ```
+  </Card>
+  
+  <Card title="pnpm (recommended)" icon="package" href="https://pnpm.io">
+    Fast, disk-efficient package manager.
+    
+    **Install:**
+    ```bash
+    npm install -g pnpm
+    ```
+    
+    Or use npm/yarn if preferred.
+  </Card>
+  
+  <Card title="Git" icon="git-alt" href="https://git-scm.com">
+    Version control system.
+    
+    **Check version:**
+    ```bash
+    git --version
+    ```
+  </Card>
+  
+  <Card title="PostgreSQL (optional)" icon="database" href="https://postgresql.org">
+    Required only if using authentication.
+    
+    Can use hosted services like Supabase or Neon.
+  </Card>
+</CardGroup>
+
+## Initial Setup
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/yourusername/github-wrapped.git
+    cd github-wrapped
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    pnpm install
+    ```
+    
+    This installs all packages listed in `package.json`.
+    
+    <Tip>
+      First install may take 2-3 minutes. Subsequent installs are cached and much faster.
+    </Tip>
+  </Step>
+  
+  <Step title="Configure Environment Variables">
+    Create a `.env.local` file in the project root:
+    
+    ```bash
+    touch .env.local
+    ```
+    
+    Add the following variables:
+    
+    ```bash .env.local
+    # Optional: GitHub Personal Access Token
+    # Get one at: https://github.com/settings/tokens
+    # Increases rate limit from 60/hour to 5,000/hour
+    GITHUB_TOKEN=ghp_your_token_here
+    
+    # Optional: Redis Cache (for production-like caching)
+    # Sign up at: https://upstash.com
+    UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+    UPSTASH_REDIS_REST_TOKEN=your_token_here
+    
+    # Required for Authentication (optional feature)
+    # PostgreSQL connection string
+    DATABASE_URL=postgresql://user:password@localhost:5432/github_wrapped
+    
+    # better-auth configuration
+    BETTER_AUTH_SECRET=your-random-secret-here
+    BETTER_AUTH_URL=http://localhost:3000
+    
+    # GitHub OAuth App (for auth feature)
+    GITHUB_CLIENT_ID=your_client_id
+    GITHUB_CLIENT_SECRET=your_client_secret
+    ```
+    
+    <Note>
+      Only `GITHUB_TOKEN` is recommended for development. Other variables are optional.
+    </Note>
+  </Step>
+  
+  <Step title="Set Up Database (if using auth)">
+    If you're using authentication features:
+    
+    ```bash
+    # Generate Prisma client
+    pnpm prisma generate
+    
+    # Run database migrations
+    pnpm prisma migrate dev
+    ```
+    
+    Skip this step if you're not working on auth features.
+  </Step>
+  
+  <Step title="Start Development Server">
+    ```bash
+    pnpm dev
+    ```
+    
+    This starts the Next.js development server on [http://localhost:3000](http://localhost:3000).
+    
+    ```plaintext
+    ▲ Next.js 16.0.7
+    - Local:        http://localhost:3000
+    - Environments: .env.local
+    
+    ✓ Ready in 2.3s
+    ```
+  </Step>
+</Steps>
+
+## Available Scripts
+
+The project includes several npm scripts defined in `package.json`:
+
+<CodeGroup>
+```bash Development
+# Start development server with hot reload
+pnpm dev
+
+# Runs on http://localhost:3000
+# Auto-reloads on file changes
+```
+
+```bash Production Build
+# Build for production
+pnpm build
+
+# Creates optimized production build in .next/
+# Includes:
+# - Static optimization
+# - Code splitting
+# - Image optimization
+```
+
+```bash Production Server
+# Start production server (after build)
+pnpm start
+
+# Runs production build on http://localhost:3000
+# Must run pnpm build first
+```
+
+```bash Linting
+# Run ESLint
+pnpm lint
+
+# Checks for:
+# - Code style issues
+# - TypeScript errors
+# - Next.js best practices
+```
+</CodeGroup>
+
+## Development Workflow
+
+### Hot Reload
+
+Next.js provides automatic hot reload for:
+
+- **React components** - Instant updates without losing state
+- **API routes** - Automatic restart on changes
+- **Styles** - Live CSS updates
+- **TypeScript** - Type checking in background
+
+<Tip>
+  If hot reload stops working, restart the dev server with `Ctrl+C` then `pnpm dev`.
+</Tip>
+
+### File Watching
+
+The dev server watches these directories:
+
+- `app/` - Pages and API routes
+- `components/` - React components
+- `lib/` - Business logic
+- `types/` - Type definitions
+- `public/` - Static assets
+
+### TypeScript Integration
+
+TypeScript errors appear in:
+
+1. **Terminal** - Real-time type checking
+2. **Browser** - Overlay with error details
+3. **IDE** - Inline errors (VS Code, etc.)
+
+```bash
+# Manual type check
+npx tsc --noEmit
+```
+
+## Debugging Tips
+
+### Browser DevTools
+
+<Accordion title="React DevTools">
+  Install [React DevTools](https://react.dev/learn/react-developer-tools) browser extension.
+  
+  **Features:**
+  - Inspect component tree
+  - View props and state
+  - Track re-renders
+  - Profile performance
+</Accordion>
+
+<Accordion title="Network Tab">
+  Monitor API requests:
+  
+  1. Open DevTools (F12)
+  2. Go to Network tab
+  3. Filter by "Fetch/XHR"
+  4. Inspect API calls to `/api/wrapped`, `/api/validate`, etc.
+  
+  **Look for:**
+  - Response times
+  - Status codes
+  - Request/response payloads
+  - Rate limit headers
+</Accordion>
+
+<Accordion title="Console Logging">
+  Use strategic console logs:
+  
+  ```typescript
+  // Client components
+  console.log('User input:', { owner, repo, year })
+  
+  // API routes
+  console.log('Fetching wrapped data for:', owner, repo)
+  
+  // Services
+  console.log('GitHub API response:', data)
+  ```
+  
+  <Warning>
+    Remove console.logs before committing to production!
+  </Warning>
+</Accordion>
+
+<Accordion title="VS Code Debugger">
+  Add `.vscode/launch.json`:
+  
+  ```json
+  {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Next.js: debug server-side",
+        "type": "node-terminal",
+        "request": "launch",
+        "command": "pnpm dev"
+      },
+      {
+        "name": "Next.js: debug client-side",
+        "type": "chrome",
+        "request": "launch",
+        "url": "http://localhost:3000"
+      }
+    ]
+  }
+  ```
+  
+  Then press F5 to start debugging with breakpoints.
+</Accordion>
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Port 3000 already in use">
+    **Error:**
+    ```
+    Error: listen EADDRINUSE: address already in use :::3000
+    ```
+    
+    **Solutions:**
+    
+    ```bash
+    # Option 1: Kill process on port 3000
+    # macOS/Linux
+    lsof -ti:3000 | xargs kill -9
+    
+    # Windows
+    netstat -ano | findstr :3000
+    taskkill /PID <PID> /F
+    
+    # Option 2: Use different port
+    pnpm dev -- -p 3001
+    ```
+  </Accordion>
+  
+  <Accordion title="TypeScript errors on startup">
+    **Error:**
+    ```
+    Type error: Cannot find module '@/types'
+    ```
+    
+    **Solution:**
+    ```bash
+    # Reinstall dependencies
+    rm -rf node_modules .next
+    pnpm install
+    
+    # Restart dev server
+    pnpm dev
+    ```
+  </Accordion>
+  
+  <Accordion title="GitHub API rate limit exceeded">
+    **Error:**
+    ```json
+    { "error": "API rate limit exceeded" }
+    ```
+    
+    **Solutions:**
+    1. Add `GITHUB_TOKEN` to `.env.local`
+    2. Wait for rate limit reset (check headers)
+    3. Use cache to avoid repeated requests
+    
+    **Check remaining requests:**
+    ```bash
+    curl -H "Authorization: token YOUR_TOKEN" \
+      https://api.github.com/rate_limit
+    ```
+  </Accordion>
+  
+  <Accordion title="Redis connection failed">
+    **Error:**
+    ```
+    Error connecting to Redis
+    ```
+    
+    **Solution:**
+    
+    The app automatically falls back to in-memory cache. This is expected in development.
+    
+    To use Redis in development:
+    1. Sign up for [Upstash Redis](https://upstash.com)
+    2. Create a database
+    3. Add credentials to `.env.local`
+  </Accordion>
+  
+  <Accordion title="Module not found errors">
+    **Error:**
+    ```
+    Module not found: Can't resolve '@/components/Button'
+    ```
+    
+    **Solution:**
+    ```bash
+    # Clear Next.js cache
+    rm -rf .next
+    
+    # Restart dev server
+    pnpm dev
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Testing Features Locally
+
+### Test Repository Input
+
+1. Go to [http://localhost:3000](http://localhost:3000)
+2. Enter a repository (e.g., `facebook/react`)
+3. Select year (e.g., `2024`)
+4. Click "Generate Wrapped"
+
+### Test API Endpoints
+
+Use curl or Postman to test API routes:
+
+```bash
+# Validate repository
+curl -X POST http://localhost:3000/api/validate \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"facebook","repo":"react"}'
+
+# Generate wrapped
+curl -X POST http://localhost:3000/api/wrapped \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"facebook","repo":"react","year":2024}'
+```
+
+### Test Dark Mode
+
+1. Click the theme toggle in the navbar
+2. Verify all components render correctly
+3. Check localStorage: `localStorage.getItem('theme')`
+
+### Test Mobile Responsiveness
+
+1. Open DevTools (F12)
+2. Click device toolbar (Ctrl+Shift+M)
+3. Test different screen sizes:
+   - Mobile: 375px (iPhone)
+   - Tablet: 768px (iPad)
+   - Desktop: 1920px
+
+## Performance Profiling
+
+### Next.js Build Analysis
+
+```bash
+# Analyze bundle size
+pnpm build
+
+# Output shows page sizes:
+# ┌ ○ /               1.2 kB
+# ├ ○ /wrapped/[...] 2.5 kB
+# └ λ /api/wrapped   0 B
+```
+
+### React Profiler
+
+1. Install [React DevTools](https://react.dev/learn/react-developer-tools)
+2. Open Profiler tab
+3. Click "Record"
+4. Interact with the app
+5. Stop recording
+6. Analyze render times
+
+## Environment-Specific Configuration
+
+### Development Mode
+
+Development mode includes:
+
+- Hot reload
+- Detailed error messages
+- Unminified code
+- Source maps
+- Rate limit bypass (in `lib/github.ts:23`)
+
+### Production Mode
+
+Production builds include:
+
+- Minified code
+- Optimized images
+- Static generation
+- Tree shaking
+- Code splitting
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Learn about the codebase organization
+  </Card>
+  
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the system design
+  </Card>
+  
+  <Card title="Contributing" icon="code-pull-request" href="/development/contributing">
+    Start contributing to the project
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api-reference">
+    Explore API endpoints
+  </Card>
+</CardGroup>
+
+<Tip>
+  Join our [Discord community](https://discord.gg/yourserver) for real-time help with development!
+</Tip>

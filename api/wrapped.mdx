@@ -1,0 +1,353 @@
+---
+title: Repository Wrapped
+description: Generate year-in-review analytics for GitHub repositories
+---
+
+<Note>
+Endpoint: `GET /api/wrapped`
+</Note>
+
+Generate comprehensive year-in-review analytics for any GitHub repository, including contribution statistics, language breakdown, release history, and community growth metrics.
+
+## Request
+
+### Query Parameters
+
+<ParamField query="owner" type="string" required>
+  Repository owner (username or organization name)
+  
+  Example: `vercel`, `facebook`, `torvalds`
+</ParamField>
+
+<ParamField query="repo" type="string" required>
+  Repository name
+  
+  Example: `next.js`, `react`, `linux`
+</ParamField>
+
+<ParamField query="year" type="number" default="Previous year">
+  Year to generate wrapped for (2008 - current year)
+  
+  Example: `2024`
+</ParamField>
+
+<ParamField query="accessToken" type="string">
+  GitHub personal access token for private repositories
+  
+  **Note**: When provided, caching is disabled to protect private data.
+</ParamField>
+
+### Validation Rules
+
+- `owner`: Must be at least 1 character
+- `repo`: Must be at least 1 character  
+- `year`: Integer between 2008 and current year
+- `accessToken`: Optional, required for private repositories
+
+## Response
+
+### Success Response
+
+<ResponseField name="data" type="WrappedData">
+  The complete wrapped analytics data
+  
+  <Expandable title="WrappedData structure">
+    <ResponseField name="repository" type="RepositoryInfo">
+      Repository metadata
+      <Expandable title="properties">
+        <ResponseField name="owner" type="string">Repository owner</ResponseField>
+        <ResponseField name="repo" type="string">Repository name</ResponseField>
+        <ResponseField name="name" type="string">Full repository name</ResponseField>
+        <ResponseField name="description" type="string | null">Repository description</ResponseField>
+        <ResponseField name="stars" type="number">Total stars</ResponseField>
+        <ResponseField name="forks" type="number">Total forks</ResponseField>
+        <ResponseField name="language" type="string | null">Primary language</ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="year" type="number">
+      The year this wrapped data covers
+    </ResponseField>
+    
+    <ResponseField name="contributors" type="object">
+      Contributor statistics
+      <Expandable title="properties">
+        <ResponseField name="topByCommits" type="Contributor[]">
+          Top contributors by commit count
+        </ResponseField>
+        <ResponseField name="topByLines" type="Contributor[]">
+          Top contributors by lines of code
+        </ResponseField>
+        <ResponseField name="newContributors" type="number">
+          Number of first-time contributors this year
+        </ResponseField>
+        <ResponseField name="mostActiveReviewer" type="Contributor">
+          Contributor with most PR reviews
+        </ResponseField>
+        <ResponseField name="total" type="number">
+          Total number of contributors
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="activity" type="CommitStats">
+      Commit activity patterns
+      <Expandable title="properties">
+        <ResponseField name="total" type="number">Total commits</ResponseField>
+        <ResponseField name="byMonth" type="Record<string, number>">Commits per month</ResponseField>
+        <ResponseField name="byDayOfWeek" type="Record<string, number>">Commits per day of week</ResponseField>
+        <ResponseField name="byHour" type="Record<string, number>">Commits per hour</ResponseField>
+        <ResponseField name="busiestMonth" type="object">Month with most activity</ResponseField>
+        <ResponseField name="busiestWeek" type="object">Week with most activity</ResponseField>
+        <ResponseField name="averagePerDay" type="number">Average commits per day</ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="community" type="object">
+      Community growth metrics
+      <Expandable title="properties">
+        <ResponseField name="starsGained" type="number">New stars this year</ResponseField>
+        <ResponseField name="forksGained" type="number">New forks this year</ResponseField>
+        <ResponseField name="issuesOpened" type="number">Issues opened</ResponseField>
+        <ResponseField name="issuesClosed" type="number">Issues closed</ResponseField>
+        <ResponseField name="prsMerged" type="number">Pull requests merged</ResponseField>
+        <ResponseField name="watchersGained" type="number">New watchers</ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="languages" type="LanguageStats[]">
+      Programming language breakdown
+    </ResponseField>
+    
+    <ResponseField name="releases" type="ReleaseInfo[]">
+      Releases published this year
+    </ResponseField>
+    
+    <ResponseField name="mostEditedFiles" type="array">
+      Files with most changes
+    </ResponseField>
+    
+    <ResponseField name="monthly" type="MonthlySnapshot[]">
+      Month-by-month breakdown (optional)
+    </ResponseField>
+    
+    <ResponseField name="generatedAt" type="string">
+      ISO timestamp when data was generated
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="cached" type="boolean">
+  Whether this response was served from cache
+</ResponseField>
+
+### Error Responses
+
+<CodeGroup>
+```json 400 Bad Request
+{
+  "error": "Invalid parameters",
+  "details": [
+    {
+      "code": "too_small",
+      "minimum": 2008,
+      "type": "number",
+      "path": ["year"],
+      "message": "Number must be greater than or equal to 2008"
+    }
+  ]
+}
+```
+
+```json 404 Not Found
+{
+  "error": "Repository validation failed"
+}
+```
+
+```json 429 Rate Limited
+{
+  "error": "Rate limit exceeded",
+  "resetAt": "2026-03-03T12:00:00Z"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "error": "Failed to generate wrapped",
+  "message": "Detailed error message"
+}
+```
+</CodeGroup>
+
+## Examples
+
+### Basic Request
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/wrapped?owner=vercel&repo=next.js&year=2024"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/wrapped?owner=vercel&repo=next.js&year=2024'
+);
+const { data, cached } = await response.json();
+
+console.log(`Total commits: ${data.activity.total}`);
+console.log(`Cached response: ${cached}`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-domain.com/api/wrapped',
+    params={
+        'owner': 'vercel',
+        'repo': 'next.js',
+        'year': 2024
+    }
+)
+
+data = response.json()['data']
+print(f"Stars gained: {data['community']['starsGained']}")
+```
+</CodeGroup>
+
+### Private Repository Request
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/wrapped?owner=myorg&repo=private-repo&year=2024&accessToken=ghp_xxxxx"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/wrapped?' + new URLSearchParams({
+    owner: 'myorg',
+    repo: 'private-repo',
+    year: '2024',
+    accessToken: process.env.GITHUB_TOKEN
+  })
+);
+const { data } = await response.json();
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "repository": {
+      "owner": "vercel",
+      "repo": "next.js",
+      "name": "vercel/next.js",
+      "description": "The React Framework",
+      "stars": 125000,
+      "forks": 26800,
+      "language": "TypeScript"
+    },
+    "year": 2024,
+    "contributors": {
+      "topByCommits": [
+        {
+          "login": "timneutkens",
+          "avatar_url": "https://avatars.githubusercontent.com/u/6324199",
+          "contributions": 342,
+          "linesAdded": 12500,
+          "linesRemoved": 8300
+        }
+      ],
+      "topByLines": [...],
+      "newContributors": 156,
+      "total": 2847
+    },
+    "activity": {
+      "total": 3842,
+      "byMonth": {
+        "Jan": 285,
+        "Feb": 312,
+        "Mar": 398
+      },
+      "byDayOfWeek": {
+        "Monday": 612,
+        "Tuesday": 589
+      },
+      "byHour": {
+        "0": 45,
+        "1": 32
+      },
+      "busiestMonth": { "month": "Mar", "count": 398 },
+      "busiestWeek": { "week": "2024-W12", "count": 156 },
+      "averagePerDay": 10.5
+    },
+    "community": {
+      "starsGained": 15000,
+      "forksGained": 2100,
+      "issuesOpened": 1850,
+      "issuesClosed": 1720,
+      "prsMerged": 1245,
+      "watchersGained": 450
+    },
+    "languages": [
+      {
+        "language": "TypeScript",
+        "bytes": 8500000,
+        "percentage": 78.5
+      },
+      {
+        "language": "JavaScript",
+        "bytes": 1200000,
+        "percentage": 11.2
+      }
+    ],
+    "releases": [
+      {
+        "tag_name": "v14.0.0",
+        "published_at": "2024-05-15T10:30:00Z",
+        "name": "Next.js 14",
+        "isMajor": true
+      }
+    ],
+    "mostEditedFiles": [
+      { "path": "packages/next/src/server/base-server.ts", "changes": 156 },
+      { "path": "packages/next/src/client/index.tsx", "changes": 142 }
+    ],
+    "generatedAt": "2026-03-03T08:00:00Z"
+  },
+  "cached": false
+}
+```
+
+## Rate Limiting
+
+The endpoint checks GitHub API rate limits before processing:
+
+- Requires at least **10 remaining requests** to proceed
+- Returns 429 status if rate limit is too low
+- Authenticated requests have higher limits (5,000/hour vs 60/hour)
+
+## Caching Behavior
+
+- Public repository data is cached for **24 hours**
+- Private repository data is **never cached**
+- Requests with `accessToken` parameter bypass cache
+- Cache key format: `wrapped:{owner}:{repo}:{year}`
+
+## Source Code
+
+Implementation: `app/api/wrapped/route.ts`
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="User Wrapped" icon="user" href="/api/user-wrapped">
+    Generate user activity analytics
+  </Card>
+  <Card title="Validate Repository" icon="check" href="/api/validate">
+    Validate repository exists before generating wrapped
+  </Card>
+</CardGroup>

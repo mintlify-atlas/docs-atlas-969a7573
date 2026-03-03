@@ -1,0 +1,241 @@
+---
+title: User Wrapped
+description: Personal year-in-code visualization for GitHub users
+---
+
+# User Wrapped
+
+User Wrapped creates a personalized year-in-code visualization for individual GitHub users, showcasing their coding activity, contributions, and achievements across all repositories.
+
+## What Makes It Different
+
+Unlike Repository Wrapped which focuses on a single repository, User Wrapped:
+- Aggregates data from **all repositories** a user contributed to
+- Tracks personal coding patterns and habits
+- Highlights individual achievements and milestones
+- Shows contribution streaks and consistency
+- Analyzes up to 15 most active repositories to optimize performance
+
+## Metrics Tracked
+
+### Overview Statistics
+
+<CardGroup cols={2}>
+  <Card title="Total Commits" icon="code-commit">
+    All commits made by the user during the year
+  </Card>
+  
+  <Card title="Pull Requests" icon="git-pull-request">
+    Total PRs created across all repositories
+  </Card>
+  
+  <Card title="Issues" icon="circle-dot">
+    Issues opened by the user
+  </Card>
+  
+  <Card title="Total Stars" icon="star">
+    Cumulative stars across all user repositories
+  </Card>
+</CardGroup>
+
+### Language Proficiency
+
+Analyzes programming language usage across all repositories:
+- Aggregated byte count per language
+- Percentage distribution
+- Top languages ranked by usage
+
+### Activity Patterns
+
+#### Hourly Activity
+Tracks commits by hour (0-23) to identify:
+- Peak productivity hours
+- Night owl coding sessions
+- Work schedule patterns
+
+#### Daily Activity
+Commit distribution by day of week:
+- Monday through Sunday breakdown
+- Weekday vs. weekend coding habits
+- Identifies the most active day
+
+#### Monthly Activity
+Tracks the busiest month:
+```typescript
+busiestMonth: {
+  month: string;  // e.g., "March"
+  count: number;  // Total commits
+}
+```
+
+### Contribution Streaks
+
+<Info>
+Streak tracking helps visualize coding consistency and dedication throughout the year.
+</Info>
+
+The system calculates:
+- **Longest Streak** - Maximum consecutive days of activity
+- **Total Active Days** - Total days with at least one commit/PR/issue
+- **Most Active Day** - Single day with the most activity
+
+```typescript
+streak: {
+  longest: number;              // e.g., 42 days
+  totalActiveDays: number;      // e.g., 287 days
+  mostActiveDay: {
+    date: string;               // "2024-03-15"
+    count: number;              // 47 contributions
+  }
+}
+```
+
+### Monthly Snapshots
+
+Detailed breakdown for each month including:
+- Commits
+- Pull requests merged
+- Issues opened and closed
+- Top 3 repositories worked on that month
+  - Repository name
+  - Commits, PRs, and issues per repo
+
+### Top Repositories
+
+Highlights the user's top 5 most active repositories:
+- Repository name and owner
+- Description
+- Star count
+- Primary language
+
+## How to Generate User Wrapped
+
+<Steps>
+  <Step title="Access User Wrapped">
+    Navigate to the GitHub Wrapped homepage and select "User Wrapped" mode
+  </Step>
+  
+  <Step title="Enter Username">
+    Input your GitHub username or any public GitHub user
+    
+    Example: `torvalds`
+  </Step>
+  
+  <Step title="Select Year">
+    Choose the year to analyze (current year is default)
+  </Step>
+  
+  <Step title="Generate">
+    Click generate to create the personalized wrapped visualization
+  </Step>
+</Steps>
+
+<Note>
+For authenticated users viewing their own wrapped, the system can access private repository data using their GitHub access token. Public users only see public repository data.
+</Note>
+
+## Data Collection Process
+
+The `buildUserWrapped` method in `lib/analytics.ts` performs the following:
+
+1. **Fetch User Profile**
+   - Basic profile information
+   - Follower count
+   - Public repository count
+
+2. **Retrieve Repository List**
+   - All repositories the user owns or contributed to
+   - Filtered by creation/activity in the target year
+
+3. **Optimize for Performance**
+   - Limits deep scanning to top 15 most active repositories
+   - Prevents rate limit issues for users with 100+ repositories
+   - Uses parallel batch processing
+
+4. **Aggregate Activity Data**
+   For each repository:
+   - Languages used
+   - User's commits (filtered by date range)
+   - User's pull requests
+   - User's issues
+
+5. **Calculate Derived Statistics**
+   - Language totals across all repos
+   - Activity patterns (hourly, daily, monthly)
+   - Contribution streaks
+   - Most active periods
+
+## Visualization Slides
+
+The User Wrapped story includes:
+
+### Slide 0: Introduction
+Welcomes the user with their avatar and username.
+
+### Slide 1: Overview Stats
+Displays total commits, PRs, issues, and repositories.
+
+### Slide 2: Top Languages
+Visualizes the user's programming language distribution.
+
+### Slide 3: Busiest Month
+Highlights which month had the most activity.
+
+### Slide 4: Monthly Cadence
+Shows activity trends across all months (if data exists).
+
+### Slide 5: Top Repositories
+Spotlights the repositories where the user was most active.
+
+### Slides 6-8: Activity Patterns
+- Hourly activity heatmap
+- Daily activity breakdown
+- Contribution streak visualization
+
+### Slide 9: Share
+Social sharing options and link copying.
+
+## Implementation Reference
+
+```typescript
+// Generate user wrapped for a full year
+const userWrapped = await analytics.generateUserWrapped(username, year);
+
+// Generate for a specific month
+const monthWrapped = await analytics.generateUserWrappedForMonth(
+  username,
+  year,
+  month  // 1-12
+);
+
+// Generate for a custom date range
+const rangeWrapped = await analytics.generateUserWrappedRange(
+  username,
+  year,
+  since,  // ISO date string
+  until   // ISO date string
+);
+```
+
+## Caching
+
+User Wrapped data is cached with the key pattern:
+```
+wrapped:user:v2:{username}:{year}
+```
+
+Cache duration: **24 hours**
+
+## API Endpoint
+
+Access user wrapped via:
+
+```
+GET /wrapped/user/{username}/{year}
+```
+
+Example: `/wrapped/user/octocat/2024`
+
+<Info>
+The user wrapped feature gracefully handles API errors and missing data, ensuring a resilient user experience even when some repositories are inaccessible.
+</Info>

@@ -1,0 +1,342 @@
+---
+title: Validate Repository
+description: Validate that a GitHub repository exists and is accessible
+---
+
+<Note>
+Endpoint: `GET /api/validate`
+</Note>
+
+Validate whether a GitHub repository exists and retrieve basic repository information. This endpoint is useful for form validation before generating wrapped data.
+
+## Request
+
+### Query Parameters
+
+<ParamField query="owner" type="string" required>
+  Repository owner (username or organization name)
+  
+  Example: `vercel`, `facebook`, `microsoft`
+</ParamField>
+
+<ParamField query="repo" type="string" required>
+  Repository name
+  
+  Example: `next.js`, `react`, `vscode`
+</ParamField>
+
+## Response
+
+### Success Response
+
+<ResponseField name="valid" type="boolean">
+  Whether the repository exists and is accessible
+</ResponseField>
+
+<ResponseField name="repository" type="RepositoryInfo">
+  Repository metadata (only included if valid is true)
+  
+  <Expandable title="RepositoryInfo structure">
+    <ResponseField name="owner" type="string">
+      Repository owner
+    </ResponseField>
+    
+    <ResponseField name="repo" type="string">
+      Repository name
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Full repository name (owner/repo)
+    </ResponseField>
+    
+    <ResponseField name="description" type="string | null">
+      Repository description
+    </ResponseField>
+    
+    <ResponseField name="stars" type="number">
+      Total star count
+    </ResponseField>
+    
+    <ResponseField name="forks" type="number">
+      Total fork count
+    </ResponseField>
+    
+    <ResponseField name="language" type="string | null">
+      Primary programming language
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Response
+
+<ResponseField name="valid" type="boolean">
+  `false` when repository doesn't exist
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Error message explaining why validation failed
+</ResponseField>
+
+## Examples
+
+### Valid Repository
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/validate?owner=vercel&repo=next.js"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/validate?owner=vercel&repo=next.js'
+);
+const result = await response.json();
+
+if (result.valid) {
+  console.log(`Repository: ${result.repository.name}`);
+  console.log(`Stars: ${result.repository.stars}`);
+  console.log(`Language: ${result.repository.language}`);
+} else {
+  console.error(`Invalid: ${result.error}`);
+}
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-domain.com/api/validate',
+    params={'owner': 'vercel', 'repo': 'next.js'}
+)
+
+result = response.json()
+if result['valid']:
+    print(f"Repository exists: {result['repository']['name']}")
+    print(f"Stars: {result['repository']['stars']}")
+```
+</CodeGroup>
+
+**Response:**
+
+```json
+{
+  "valid": true,
+  "repository": {
+    "owner": "vercel",
+    "repo": "next.js",
+    "name": "vercel/next.js",
+    "description": "The React Framework",
+    "stars": 125000,
+    "forks": 26800,
+    "language": "TypeScript"
+  }
+}
+```
+
+### Invalid Repository
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/validate?owner=invalid&repo=does-not-exist"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/validate?owner=invalid&repo=does-not-exist'
+);
+const result = await response.json();
+
+console.log(result.valid); // false
+console.log(result.error); // "Repository not found"
+```
+</CodeGroup>
+
+**Response (404):**
+
+```json
+{
+  "valid": false,
+  "error": "Repository not found"
+}
+```
+
+### Private Repository (Authenticated)
+
+<CodeGroup>
+```bash cURL with Session
+curl "https://your-domain.com/api/validate?owner=myorg&repo=private-repo" \
+  -H "Cookie: better-auth.session_token=..."
+```
+
+```javascript JavaScript with Session
+// Assumes user is logged in via Better Auth
+const response = await fetch(
+  'https://your-domain.com/api/validate?owner=myorg&repo=private-repo',
+  { credentials: 'include' }
+);
+const result = await response.json();
+```
+</CodeGroup>
+
+**Response:**
+
+```json
+{
+  "valid": true,
+  "repository": {
+    "owner": "myorg",
+    "repo": "private-repo",
+    "name": "myorg/private-repo",
+    "description": "Internal project",
+    "stars": 12,
+    "forks": 3,
+    "language": "JavaScript"
+  }
+}
+```
+
+### Missing Parameters
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/validate?owner=vercel"
+```
+</CodeGroup>
+
+**Response (400):**
+
+```json
+{
+  "error": "Missing owner or repo parameter"
+}
+```
+
+## Authentication Behavior
+
+### Unauthenticated Requests
+
+- Can validate **public repositories** only
+- Private repositories will return `valid: false`
+
+### Authenticated Requests
+
+- Can validate **both public and private repositories**
+- Uses session cookie or GitHub token for authentication
+- Private repository metadata is **not cached**
+
+## Caching Behavior
+
+Validation results are cached to reduce GitHub API calls:
+
+- **Public repositories**: Cached for 24 hours
+- **Private repositories**: Never cached
+- **Failed validations**: Cached for 24 hours
+- Cache key format: `validation:{owner}:{repo}`
+
+### Cache Invalidation
+
+Authenticated users bypass cache for private repositories:
+
+```javascript
+// If logged in, ignore invalid cache (might be private repo that failed for anon)
+if (!githubToken || cached.valid) {
+  return cached;
+}
+```
+
+## Use Cases
+
+### Form Validation
+
+```javascript
+function RepositoryForm() {
+  const [owner, setOwner] = useState('');
+  const [repo, setRepo] = useState('');
+  const [validation, setValidation] = useState(null);
+  
+  const validateRepo = async () => {
+    const response = await fetch(
+      `/api/validate?owner=${owner}&repo=${repo}`
+    );
+    const result = await response.json();
+    setValidation(result);
+  };
+  
+  return (
+    <form>
+      <input value={owner} onChange={(e) => setOwner(e.target.value)} />
+      <input value={repo} onChange={(e) => setRepo(e.target.value)} />
+      <button onClick={validateRepo}>Validate</button>
+      
+      {validation && (
+        validation.valid ? (
+          <div>✓ Repository found: {validation.repository.name}</div>
+        ) : (
+          <div>✗ {validation.error}</div>
+        )
+      )}
+    </form>
+  );
+}
+```
+
+### Pre-flight Check
+
+```javascript
+async function generateWrappedSafely(owner, repo, year) {
+  // First validate the repository exists
+  const validation = await fetch(
+    `/api/validate?owner=${owner}&repo=${repo}`
+  ).then(r => r.json());
+  
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+  
+  // Now generate wrapped data
+  const wrapped = await fetch(
+    `/api/wrapped?owner=${owner}&repo=${repo}&year=${year}`
+  ).then(r => r.json());
+  
+  return wrapped.data;
+}
+```
+
+## Error Handling
+
+<CodeGroup>
+```json 400 Bad Request
+{
+  "error": "Missing owner or repo parameter"
+}
+```
+
+```json 404 Not Found
+{
+  "valid": false,
+  "error": "Repository validation failed"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "error": "Validation failed",
+  "message": "Detailed error message"
+}
+```
+</CodeGroup>
+
+## Source Code
+
+Implementation: `app/api/validate/route.ts`
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="chart-line" href="/api/wrapped">
+    Generate wrapped data after validation
+  </Card>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn about authenticating for private repos
+  </Card>
+</CardGroup>

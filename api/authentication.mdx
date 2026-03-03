@@ -1,0 +1,204 @@
+---
+title: Authentication
+description: GitHub OAuth authentication for accessing private repositories
+---
+
+GitHub Wrapped uses [Better Auth](https://www.better-auth.com/) with GitHub OAuth to authenticate users and access private repositories.
+
+## OAuth Configuration
+
+The authentication system is configured in `lib/auth.ts`:
+
+```typescript
+import { betterAuth } from "better-auth";
+
+export const auth = betterAuth({
+  socialProviders: {
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      scope: ["repo", "read:user"],
+    },
+  },
+});
+```
+
+### Required Scopes
+
+- `repo` - Access to public and private repositories
+- `read:user` - Read user profile information
+
+## Authentication Flow
+
+### 1. Initiate OAuth
+
+Redirect users to the GitHub OAuth URL:
+
+```
+GET /api/auth/signin/github
+```
+
+This endpoint is automatically handled by Better Auth and redirects to GitHub's OAuth page.
+
+### 2. OAuth Callback
+
+After user authorization, GitHub redirects back to:
+
+```
+GET /api/auth/callback/github
+```
+
+Better Auth handles the callback and establishes a session.
+
+### 3. Session Management
+
+Sessions are stored in cookies with the following configuration:
+
+- **Duration**: 7 days
+- **Strategy**: JWE (JSON Web Encryption)
+- **Refresh**: Automatic stateless refresh
+
+## Using Authentication in Requests
+
+### Session-Based (Recommended)
+
+Once authenticated, API requests automatically use the session cookie:
+
+```bash
+curl "https://your-domain.com/api/wrapped?owner=myorg&repo=private-repo" \
+  -H "Cookie: better-auth.session_token=..."
+```
+
+### Access Token Parameter
+
+For programmatic access, you can pass an access token directly:
+
+```bash
+curl "https://your-domain.com/api/wrapped?owner=myorg&repo=private-repo&accessToken=ghp_xxxxx"
+```
+
+<Warning>
+Never expose your GitHub personal access token in client-side code or public repositories.
+</Warning>
+
+## Authenticated Endpoints
+
+Some endpoints require authentication:
+
+### Required Authentication
+
+- `GET /api/performance` - User performance metrics
+- `GET /api/summary` - Monthly user summary
+- `GET /api/user/repos` - List user repositories
+
+### Optional Authentication
+
+- `GET /api/wrapped` - Repository wrapped (required for private repos)
+- `GET /api/wrapped/user` - User wrapped (required for private activity)
+- `GET /api/validate` - Repository validation (required for private repos)
+
+## Getting the Current Session
+
+To check if a user is authenticated:
+
+```typescript
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+const session = await auth.api.getSession({
+  headers: await headers(),
+});
+
+if (session?.user) {
+  // User is authenticated
+  console.log(session.user);
+}
+```
+
+## Getting the Access Token
+
+To retrieve the GitHub access token for API calls:
+
+```typescript
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+const tokenData = await auth.api.getAccessToken({
+  headers: await headers(),
+  body: { providerId: "github" },
+});
+
+const accessToken = tokenData?.accessToken;
+```
+
+## Error Responses
+
+### 401 Unauthorized
+
+Returned when authentication is required but not provided:
+
+```json
+{
+  "error": "Authentication required"
+}
+```
+
+### 403 Forbidden
+
+Returned when the GitHub token lacks necessary permissions:
+
+```json
+{
+  "error": "GitHub denied access to this data. The user or repos may be private, or the token has insufficient scopes."
+}
+```
+
+## Client Setup
+
+For Next.js applications, use the Better Auth React client:
+
+```typescript
+import { createAuthClient } from "better-auth/react";
+
+export const authClient = createAuthClient({
+  baseURL: "http://localhost:3000",
+});
+```
+
+Then use the provided hooks:
+
+```typescript
+import { authClient } from "@/lib/auth-client";
+
+function LoginButton() {
+  const { signIn } = authClient.useSession();
+  
+  return (
+    <button onClick={() => signIn.social({ provider: "github" })}>
+      Sign in with GitHub
+    </button>
+  );
+}
+```
+
+## Environment Variables
+
+Configure the following environment variables:
+
+```bash
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+BETTER_AUTH_SECRET=your_random_secret_key
+BETTER_AUTH_URL=https://your-domain.com
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="chart-line" href="/api/wrapped">
+    Use authentication to access private repositories
+  </Card>
+  <Card title="User Performance" icon="gauge" href="/api/performance">
+    Authenticated endpoint for user metrics
+  </Card>
+</CardGroup>

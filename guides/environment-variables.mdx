@@ -1,0 +1,264 @@
+---
+title: Environment Variables
+description: Configure GitHub Wrapped with environment variables for enhanced functionality
+---
+
+GitHub Wrapped works out of the box with zero configuration, but you can enhance its capabilities by setting environment variables. This guide covers all available configuration options.
+
+## Quick Start
+
+Create a `.env.local` file in your project root:
+
+```bash
+# Optional: GitHub API authentication
+GITHUB_TOKEN=ghp_your_token_here
+
+# Optional: Redis caching (Upstash)
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_token_here
+
+# Optional: Application URL
+NEXT_PUBLIC_APP_URL=https://yourapp.com
+```
+
+<Warning>
+  Never commit `.env.local` or `.env` files to version control. These files should be listed in your `.gitignore`.
+</Warning>
+
+## GitHub API Configuration
+
+### GITHUB_TOKEN
+
+**Type:** `string` (optional)  
+**Default:** `undefined`
+
+A GitHub personal access token for authenticating API requests. This significantly increases your API rate limits.
+
+<CodeGroup>
+```bash .env.local
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```typescript Usage in Code
+// lib/github.ts:18
+const authToken = token || process.env.GITHUB_TOKEN || undefined;
+this.octokit = authToken ? new Octokit({ auth: authToken }) : new Octokit();
+```
+</CodeGroup>
+
+**Benefits:**
+- Increases rate limit from 60 to 5,000 requests per hour
+- Enables access to private repositories (if needed)
+- Prevents IP-based rate limiting
+
+**How to create a token:**
+
+<Steps>
+  <Step title="Navigate to GitHub Settings">
+    Go to [GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)](https://github.com/settings/tokens)
+  </Step>
+
+  <Step title="Generate new token">
+    Click "Generate new token (classic)" and give it a descriptive name like "GitHub Wrapped API"
+  </Step>
+
+  <Step title="Select scopes">
+    For public repositories only, you don't need any scopes selected. For private repos, select:
+    - `repo` - Full control of private repositories
+  </Step>
+
+  <Step title="Copy and save the token">
+    Copy the generated token and add it to your `.env.local` file. You won't be able to see it again!
+  </Step>
+</Steps>
+
+<Note>
+  The application works fine without a token for small-scale usage. Only add one if you're hitting rate limits or need to access private repositories.
+</Note>
+
+## Caching Configuration
+
+GitHub Wrapped uses a dual-layer caching system: in-memory cache by default, with optional Redis for distributed caching.
+
+### UPSTASH_REDIS_REST_URL
+
+**Type:** `string` (optional)  
+**Default:** `undefined`
+
+The REST API URL for your Upstash Redis instance.
+
+### UPSTASH_REDIS_REST_TOKEN
+
+**Type:** `string` (optional)  
+**Default:** `undefined`
+
+The authentication token for your Upstash Redis instance.
+
+<CodeGroup>
+```bash .env.local
+UPSTASH_REDIS_REST_URL=https://us1-intent-owl-12345.upstash.io
+UPSTASH_REDIS_REST_TOKEN=AYQgASQgxxx...
+```
+
+```typescript Usage in Code
+// lib/redis.ts:3-4
+const url = process.env.UPSTASH_REDIS_REST_URL;
+const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+export const redis = new Redis({ url, token });
+```
+</CodeGroup>
+
+**When to use Redis:**
+- Deploying to multiple serverless instances (Vercel, AWS Lambda)
+- Need persistent caching across server restarts
+- High-traffic deployments
+
+**Setting up Upstash Redis:**
+
+<Steps>
+  <Step title="Create an Upstash account">
+    Sign up at [upstash.com](https://upstash.com)
+  </Step>
+
+  <Step title="Create a Redis database">
+    Create a new Redis database in the Upstash console. Choose a region close to your deployment.
+  </Step>
+
+  <Step title="Copy credentials">
+    Copy the `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` from the database details page.
+  </Step>
+
+  <Step title="Add to environment variables">
+    Add both values to your `.env.local` file or deployment platform's environment settings.
+  </Step>
+</Steps>
+
+<Note>
+  Without Redis configured, GitHub Wrapped uses an in-memory cache that works perfectly fine for single-instance deployments but is lost on server restart.
+</Note>
+
+## Application Configuration
+
+### NEXT_PUBLIC_APP_URL
+
+**Type:** `string` (optional)  
+**Default:** `http://localhost:3000`
+
+The public URL where your application is deployed. Used for generating share links and Open Graph images.
+
+```bash .env.local
+NEXT_PUBLIC_APP_URL=https://githubwrapped.tech
+```
+
+<Warning>
+  Variables prefixed with `NEXT_PUBLIC_` are exposed to the browser. Don't use this prefix for secrets!
+</Warning>
+
+### NODE_ENV
+
+**Type:** `"development" | "production" | "test"`  
+**Default:** Automatically set by Next.js
+
+Controls the environment mode. In development mode, rate limit checking is relaxed to avoid blocking local development.
+
+```typescript
+// lib/github.ts:3
+const isDev = process.env.NODE_ENV === "development";
+
+if (isDev) {
+  // Skip rate limit pressure during local development
+  return { remaining: Number.MAX_SAFE_INTEGER, ... };
+}
+```
+
+<Note>
+  You typically don't need to set this manually. Next.js sets it automatically based on the command (`dev` vs `build`/`start`).
+</Note>
+
+## Authentication Configuration (Optional)
+
+If you've implemented user authentication features:
+
+### GITHUB_CLIENT_ID
+
+**Type:** `string` (optional)
+
+OAuth application client ID for GitHub authentication.
+
+### GITHUB_CLIENT_SECRET
+
+**Type:** `string` (optional)
+
+OAuth application client secret for GitHub authentication.
+
+```bash .env.local
+GITHUB_CLIENT_ID=Iv1.xxxxxxxxxxxx
+GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+<Note>
+  These are only needed if you're using the optional authentication features for "My Year in Code" functionality.
+</Note>
+
+## Platform-Specific Configuration
+
+### Vercel
+
+Add environment variables in the Vercel dashboard:
+
+1. Go to your project settings
+2. Navigate to "Environment Variables"
+3. Add each variable with appropriate environments (Production, Preview, Development)
+
+### Docker
+
+Pass environment variables when running the container:
+
+```bash
+docker run -p 3000:3000 \
+  -e GITHUB_TOKEN=ghp_xxx \
+  -e UPSTASH_REDIS_REST_URL=https://xxx.upstash.io \
+  -e UPSTASH_REDIS_REST_TOKEN=xxx \
+  github-wrapped
+```
+
+Or use a `.env` file with Docker Compose:
+
+```yaml docker-compose.yml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+```
+
+## Environment Variables Summary
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `GITHUB_TOKEN` | No | `undefined` | GitHub API token for higher rate limits |
+| `UPSTASH_REDIS_REST_URL` | No | `undefined` | Upstash Redis URL for distributed caching |
+| `UPSTASH_REDIS_REST_TOKEN` | No | `undefined` | Upstash Redis authentication token |
+| `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public application URL |
+| `NODE_ENV` | Auto | `development` | Environment mode (set automatically) |
+| `GITHUB_CLIENT_ID` | No | `undefined` | OAuth client ID (for auth features) |
+| `GITHUB_CLIENT_SECRET` | No | `undefined` | OAuth client secret (for auth features) |
+
+## Best Practices
+
+- Use different GitHub tokens for development and production
+- Rotate tokens periodically for security
+- Set up Redis for production deployments with multiple instances
+- Always set `NEXT_PUBLIC_APP_URL` in production for correct share URLs
+- Never commit `.env` files to version control
+- Use platform-specific secret management in production (Vercel Secrets, AWS Secrets Manager, etc.)
+
+## Next Steps
+
+- Learn about [GitHub API rate limits](/guides/rate-limits)
+- Configure [caching](/guides/caching) for optimal performance
+- Complete the [setup guide](/guides/setup) for deployment

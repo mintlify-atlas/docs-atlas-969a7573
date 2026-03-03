@@ -1,0 +1,334 @@
+---
+title: User Wrapped
+description: Generate year-in-review analytics for GitHub users
+---
+
+<Note>
+Endpoint: `GET /api/wrapped/user`
+</Note>
+
+Generate comprehensive year-in-review analytics for any GitHub user, including contribution patterns, top repositories, activity streaks, and language statistics.
+
+## Request
+
+### Query Parameters
+
+<ParamField query="username" type="string" required>
+  GitHub username
+  
+  Example: `torvalds`, `gaearon`, `tj`
+</ParamField>
+
+<ParamField query="year" type="number" default="Previous year">
+  Year to generate wrapped for (2008 - current year)
+  
+  Example: `2024`
+</ParamField>
+
+<ParamField query="accessToken" type="string">
+  GitHub personal access token for private activity
+  
+  **Note**: Required to include private repository contributions. When provided, caching is disabled.
+</ParamField>
+
+### Validation Rules
+
+- `username`: Must be at least 1 character
+- `year`: Integer between 2008 and current year
+
+## Response
+
+### Success Response
+
+<ResponseField name="data" type="UserWrappedData">
+  The complete user wrapped analytics data
+  
+  <Expandable title="UserWrappedData structure">
+    <ResponseField name="user" type="UserProfile">
+      User profile information
+      <Expandable title="properties">
+        <ResponseField name="username" type="string">GitHub username</ResponseField>
+        <ResponseField name="avatar_url" type="string">Profile avatar URL</ResponseField>
+        <ResponseField name="name" type="string | null">Display name</ResponseField>
+        <ResponseField name="bio" type="string | null">User bio</ResponseField>
+        <ResponseField name="public_repos" type="number">Public repository count</ResponseField>
+        <ResponseField name="followers" type="number">Follower count</ResponseField>
+        <ResponseField name="total_stars" type="number">Total stars across all repos</ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="year" type="number">
+      The year this wrapped data covers
+    </ResponseField>
+    
+    <ResponseField name="overview" type="object">
+      High-level activity summary
+      <Expandable title="properties">
+        <ResponseField name="totalCommits" type="number">
+          Total commits made this year
+        </ResponseField>
+        <ResponseField name="totalPRs" type="number">
+          Total pull requests created
+        </ResponseField>
+        <ResponseField name="totalIssues" type="number">
+          Total issues opened
+        </ResponseField>
+        <ResponseField name="topLanguages" type="LanguageStats[]">
+          Most used programming languages
+        </ResponseField>
+        <ResponseField name="busiestMonth" type="object">
+          Month with highest activity
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="hourlyActivity" type="Record<string, number>">
+      Commits by hour of day (0-23)
+      
+      Example: `{ "0": 12, "1": 5, "14": 45, ... }`
+    </ResponseField>
+    
+    <ResponseField name="dailyActivity" type="Record<string, number>">
+      Commits by day of week
+      
+      Example: `{ "Sunday": 45, "Monday": 123, ... }`
+    </ResponseField>
+    
+    <ResponseField name="streak" type="object">
+      Contribution streak statistics
+      <Expandable title="properties">
+        <ResponseField name="longest" type="number">
+          Longest consecutive days with contributions
+        </ResponseField>
+        <ResponseField name="totalActiveDays" type="number">
+          Total days with at least one contribution
+        </ResponseField>
+        <ResponseField name="mostActiveDay" type="object">
+          Single day with most contributions
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="monthly" type="MonthlySnapshot[]">
+      Month-by-month activity breakdown (optional)
+    </ResponseField>
+    
+    <ResponseField name="topRepos" type="array">
+      Most contributed repositories
+      <Expandable title="properties">
+        <ResponseField name="name" type="string">Repository name</ResponseField>
+        <ResponseField name="owner.login" type="string">Repository owner</ResponseField>
+        <ResponseField name="description" type="string | null">Repository description</ResponseField>
+        <ResponseField name="stars" type="number">Star count</ResponseField>
+        <ResponseField name="language" type="string | null">Primary language</ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="generatedAt" type="string">
+      ISO timestamp when data was generated
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="cached" type="boolean">
+  Whether this response was served from cache
+</ResponseField>
+
+### Error Responses
+
+<CodeGroup>
+```json 400 Bad Request
+{
+  "error": "Invalid parameters"
+}
+```
+
+```json 403 Forbidden
+{
+  "error": "GitHub denied access to this data. The user or repos may be private, or the token has insufficient scopes."
+}
+```
+
+```json 404 Not Found
+{
+  "error": "GitHub user not found or data unavailable."
+}
+```
+
+```json 429 Rate Limited
+{
+  "error": "API rate limit low, try again later"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "error": "Failed to generate user wrapped"
+}
+```
+</CodeGroup>
+
+## Examples
+
+### Basic Request
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/wrapped/user?username=torvalds&year=2024"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/wrapped/user?username=torvalds&year=2024'
+);
+const { data, cached } = await response.json();
+
+console.log(`Total commits: ${data.overview.totalCommits}`);
+console.log(`Longest streak: ${data.streak.longest} days`);
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://your-domain.com/api/wrapped/user',
+    params={'username': 'torvalds', 'year': 2024}
+)
+
+data = response.json()['data']
+print(f"Total PRs: {data['overview']['totalPRs']}")
+print(f"Active days: {data['streak']['totalActiveDays']}")
+```
+</CodeGroup>
+
+### Include Private Activity
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/wrapped/user?username=myusername&year=2024&accessToken=ghp_xxxxx"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://your-domain.com/api/wrapped/user?' + new URLSearchParams({
+    username: 'myusername',
+    year: '2024',
+    accessToken: process.env.GITHUB_TOKEN
+  })
+);
+const { data } = await response.json();
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "user": {
+      "username": "gaearon",
+      "avatar_url": "https://avatars.githubusercontent.com/u/810438",
+      "name": "Dan Abramov",
+      "bio": "Working on @facebook. Co-author of Redux and Create React App.",
+      "public_repos": 282,
+      "followers": 95420,
+      "total_stars": 180500
+    },
+    "year": 2024,
+    "overview": {
+      "totalCommits": 1547,
+      "totalPRs": 156,
+      "totalIssues": 89,
+      "topLanguages": [
+        {
+          "language": "JavaScript",
+          "bytes": 4500000,
+          "percentage": 62.3
+        },
+        {
+          "language": "TypeScript",
+          "bytes": 2100000,
+          "percentage": 29.1
+        }
+      ],
+      "busiestMonth": { "month": "Mar", "count": 245 }
+    },
+    "hourlyActivity": {
+      "0": 12,
+      "1": 8,
+      "9": 95,
+      "10": 142,
+      "14": 156,
+      "15": 178,
+      "16": 145
+    },
+    "dailyActivity": {
+      "Sunday": 89,
+      "Monday": 256,
+      "Tuesday": 298,
+      "Wednesday": 287,
+      "Thursday": 245,
+      "Friday": 212,
+      "Saturday": 160
+    },
+    "streak": {
+      "longest": 87,
+      "totalActiveDays": 298,
+      "mostActiveDay": {
+        "date": "2024-03-15",
+        "count": 42
+      }
+    },
+    "topRepos": [
+      {
+        "name": "react",
+        "owner": { "login": "facebook" },
+        "description": "A declarative, efficient, and flexible JavaScript library for building user interfaces.",
+        "stars": 228000,
+        "language": "JavaScript"
+      }
+    ],
+    "generatedAt": "2026-03-03T08:00:00Z"
+  },
+  "cached": true
+}
+```
+
+## Rate Limiting
+
+The endpoint checks GitHub API rate limits before processing:
+
+- Requires at least **50 remaining requests** to proceed (higher than repository wrapped)
+- Returns 429 status if rate limit is too low
+- User data requires more API calls than repository data
+
+## Caching Behavior
+
+- Public user data is cached for **24 hours**
+- Private user data is **never cached**
+- Requests with `accessToken` parameter bypass cache
+- Cache key format: `wrapped:user:{username}:{year}`
+
+## Privacy Considerations
+
+- Public users can be queried by anyone
+- Private contributions require authentication with appropriate scopes
+- Private repository activity is only visible to authenticated users with access
+
+## Source Code
+
+Implementation: `app/api/wrapped/user/route.ts`
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Repository Wrapped" icon="chart-line" href="/api/wrapped">
+    Generate repository analytics
+  </Card>
+  <Card title="User Performance" icon="gauge" href="/api/performance">
+    Authenticated user performance metrics
+  </Card>
+  <Card title="User Summary" icon="calendar" href="/api/summary">
+    Monthly activity summary
+  </Card>
+</CardGroup>

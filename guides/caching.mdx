@@ -1,0 +1,447 @@
+---
+title: Caching System
+description: Learn how GitHub Wrapped's 24-hour caching system reduces API calls and improves performance
+---
+
+GitHub Wrapped includes an intelligent caching system that dramatically reduces GitHub API calls and improves response times. This guide explains how it works and how to configure it for optimal performance.
+
+## How Caching Works
+
+The caching system stores generated wrapped data for 24 hours, allowing subsequent requests for the same repository and year to be served instantly without hitting the GitHub API.
+
+### Cache Flow
+
+<Steps>
+  <Step title="Request received">
+    A user requests a wrapped for `facebook/react` for 2024
+  </Step>
+
+  <Step title="Check cache">
+    The system checks if data exists in cache:
+    ```typescript
+    const cached = await getCachedWrapped('facebook', 'react', 2024);
+    ```
+  </Step>
+
+  <Step title="Cache hit or miss">
+    - **Cache HIT**: Return cached data immediately (0 API calls, under 100ms response)
+    - **Cache MISS**: Fetch from GitHub API, store in cache, return data
+  </Step>
+
+  <Step title="Set expiration">
+    Cached data expires after 24 hours:
+    ```typescript
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+    ```
+  </Step>
+</Steps>
+
+## Dual-Layer Caching Architecture
+
+GitHub Wrapped uses a dual-layer approach that works in all environments:
+
+### Layer 1: In-Memory Cache (Default)
+
+Works out-of-the-box with zero configuration:
+
+```typescript
+// lib/cache.ts:7-9
+const wrappedCache = new Map<string, CacheEntry>();
+const validationCache = new Map<string, ValidationCacheEntry>();
+const customCache = new Map<string, CacheEntry>();
+```
+
+**Characteristics:**
+- No external dependencies required
+- Extremely fast (nanosecond access)
+- Persists only during server runtime
+- Perfect for single-instance deployments
+- Lost on server restart
+
+### Layer 2: Redis Cache (Optional)
+
+For production deployments with multiple instances:
+
+```typescript
+// lib/cache.ts:38-46
+if (hasRedis && redis) {
+  const entry = await redis.get<CacheEntry>(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    await redis.del(key);
+    return null;
+  }
+  return isWrappedData(entry.data) ? entry.data : null;
+}
+```
+
+**Characteristics:**
+- Shared across all instances
+- Persists across server restarts
+- Ideal for serverless deployments (Vercel, AWS Lambda)
+- Requires Upstash Redis configuration
+
+<Note>
+  The system automatically uses Redis if configured, falling back to in-memory cache otherwise. You don't need to change any code.
+</Note>
+
+## Cache Types
+
+GitHub Wrapped caches three types of data:
+
+### 1. Wrapped Data Cache
+
+Stores complete wrapped visualizations:
+
+```typescript
+const cacheKey = (owner: string, repo: string, year: number) =>
+  `wrapped:${owner}/${repo}/${year}`;
+```
+
+**Example keys:**
+- `wrapped:facebook/react/2024`
+- `wrapped:vercel/next.js/2023`
+
+### 2. Validation Cache
+
+Stores repository validation results to avoid repeated validation calls:
+
+```typescript
+const validationKey = (owner: string, repo: string) =>
+  `validate:${owner}/${repo}`;
+```
+
+**Example keys:**
+- `validate:facebook/react`
+- `validate:microsoft/vscode`
+
+### 3. Custom Wrapped Cache
+
+Stores wrappeds with custom date ranges:
+
+```typescript
+const customKey = (owner: string, repo: string, label: string) =>
+  `wrapped:${owner}/${repo}/${label}`;
+```
+
+**Example keys:**
+- `wrapped:facebook/react/2024-q1`
+- `wrapped:vercel/next.js/custom-range`
+
+## Setting Up Redis Caching
+
+For production deployments, configure Redis for distributed caching:
+
+<Steps>
+  <Step title="Create an Upstash Redis database">
+    1. Sign up at [upstash.com](https://upstash.com)
+    2. Create a new Redis database
+    3. Choose a region close to your deployment
+  </Step>
+
+  <Step title="Copy credentials">
+    From the Upstash console, copy:
+    - `UPSTASH_REDIS_REST_URL`
+    - `UPSTASH_REDIS_REST_TOKEN`
+  </Step>
+
+  <Step title="Configure environment variables">
+    Add to your `.env.local` or deployment platform:
+
+    ```bash
+    UPSTASH_REDIS_REST_URL=https://us1-intent-owl-12345.upstash.io
+    UPSTASH_REDIS_REST_TOKEN=AYQgASQgxxx...
+    ```
+  </Step>
+
+  <Step title="Deploy and test">
+    Deploy your application. The system will automatically use Redis for caching.
+  </Step>
+</Steps>
+
+### Redis Configuration Code
+
+The Redis client is initialized in `lib/redis.ts`:
+
+```typescript
+// lib/redis.ts:1-11
+import { Redis } from "@upstash/redis";
+
+const url = process.env.UPSTASH_REDIS_REST_URL;
+const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+export const redis = new Redis({
+  url,
+  token,
+});
+
+export const hasRedis = Boolean(redis);
+```
+
+## Cache Operations
+
+### Reading from Cache
+
+```typescript
+import { getCachedWrapped } from '@/lib/cache';
+
+const data = await getCachedWrapped('facebook', 'react', 2024);
+
+if (data) {
+  // Cache HIT - use cached data
+  return data;
+} else {
+  // Cache MISS - fetch from GitHub API
+  const freshData = await fetchFromGitHub();
+  await setCachedWrapped('facebook', 'react', 2024, freshData);
+  return freshData;
+}
+```
+
+### Writing to Cache
+
+```typescript
+import { setCachedWrapped } from '@/lib/cache';
+
+const wrappedData = await generateWrapped(owner, repo, year);
+
+// Automatically sets 24-hour TTL
+await setCachedWrapped(owner, repo, year, wrappedData);
+```
+
+### Clearing Cache
+
+Manually invalidate cache for a specific repository:
+
+```typescript
+import { clearCache } from '@/lib/cache';
+
+await clearCache('facebook', 'react', 2024);
+```
+
+## Cache TTL (Time-To-Live)
+
+All cached data expires after 24 hours:
+
+```typescript
+// lib/cache.ts:4
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+```
+
+### Why 24 Hours?
+
+- **Fresh data**: Repository data changes frequently
+- **API efficiency**: Balances freshness with API call reduction
+- **User expectations**: Users expect relatively current data
+- **Rate limits**: Prevents rate limit exhaustion for popular repos
+
+<Note>
+  For historical data (e.g., "2023 wrapped" in 2024), a longer TTL could be beneficial. Consider customizing TTL for past years.
+</Note>
+
+## Cache Performance Impact
+
+### Without Cache
+
+- **API calls**: 10-40 per request
+- **Response time**: 3-10 seconds
+- **Rate limit impact**: High (could exhaust limits quickly)
+
+### With Cache (Cache Hit)
+
+- **API calls**: 0
+- **Response time**: Under 100ms
+- **Rate limit impact**: None
+
+### Performance Example
+
+For a popular repository with 100 requests per day:
+
+| Metric | Without Cache | With Cache |
+|--------|---------------|------------|
+| API calls/day | 1,000-4,000 | 20-80 (only first request) |
+| Avg response time | 5s | 0.05s |
+| Rate limit usage | 20-80% of daily quota | Under 2% |
+| Cache hit rate | 0% | 99% |
+
+## Cache Expiration Logic
+
+The cache includes automatic expiration checking:
+
+```typescript
+// lib/cache.ts:49-53
+const entry = wrappedCache.get(key);
+if (!entry) return null;
+if (Date.now() > entry.expiresAt) {
+  wrappedCache.delete(key);
+  return null;
+}
+```
+
+### Expiration Handling
+
+<Steps>
+  <Step title="Check expiration">
+    Compare current time with `expiresAt` timestamp
+  </Step>
+
+  <Step title="Delete if expired">
+    Remove stale data from cache
+  </Step>
+
+  <Step title="Return null">
+    Trigger fresh data fetch from GitHub API
+  </Step>
+</Steps>
+
+## Advanced Caching Patterns
+
+### Warming the Cache
+
+Pre-populate cache for popular repositories:
+
+```typescript
+const popularRepos = [
+  { owner: 'facebook', repo: 'react' },
+  { owner: 'vercel', repo: 'next.js' },
+  { owner: 'microsoft', repo: 'vscode' },
+];
+
+for (const { owner, repo } of popularRepos) {
+  const year = new Date().getFullYear();
+  const data = await generateWrapped(owner, repo, year);
+  await setCachedWrapped(owner, repo, year, data);
+}
+```
+
+### Cache Hit Rate Monitoring
+
+Track cache effectiveness:
+
+```typescript
+let cacheHits = 0;
+let cacheMisses = 0;
+
+const data = await getCachedWrapped(owner, repo, year);
+
+if (data) {
+  cacheHits++;
+} else {
+  cacheMisses++;
+}
+
+const hitRate = cacheHits / (cacheHits + cacheMisses);
+console.log(`Cache hit rate: ${(hitRate * 100).toFixed(2)}%`);
+```
+
+### Selective Cache Invalidation
+
+Invalidate cache when repository data significantly changes:
+
+```typescript
+// Webhook handler for repository events
+async function handleRepositoryUpdate(owner: string, repo: string) {
+  const currentYear = new Date().getFullYear();
+  
+  // Clear current year cache when repo is updated
+  await clearCache(owner, repo, currentYear);
+}
+```
+
+## Caching Best Practices
+
+<CardGroup cols={2}>
+  <Card title="For Small Deployments" icon="house">
+    - Use in-memory cache (default)
+    - No configuration needed
+    - Perfect for personal instances
+    - Single server deployments
+  </Card>
+
+  <Card title="For Production" icon="building">
+    - Configure Redis caching
+    - Use Upstash for serverless
+    - Monitor cache hit rates
+    - Consider cache warming for popular repos
+  </Card>
+</CardGroup>
+
+### Optimization Tips
+
+1. **Enable Redis for serverless**: Essential for Vercel, AWS Lambda, etc.
+2. **Monitor TTL effectiveness**: Adjust based on your use case
+3. **Implement cache warming**: Pre-populate for popular repositories
+4. **Track hit rates**: Optimize caching strategy based on metrics
+5. **Consider longer TTL for historical data**: Past years rarely change
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cache not persisting across requests">
+    **Problem**: Each request seems to miss the cache
+    
+    **Solutions**:
+    - Check if Redis is properly configured (for serverless)
+    - Verify `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`
+    - In-memory cache doesn't work across multiple serverless instances
+  </Accordion>
+
+  <Accordion title="Stale data being served">
+    **Problem**: Data not updating after 24 hours
+    
+    **Solutions**:
+    - Check if cache expiration is working: verify `Date.now() > entry.expiresAt`
+    - Manually clear cache: `await clearCache(owner, repo, year)`
+    - Verify system clock is accurate
+  </Accordion>
+
+  <Accordion title="Redis connection errors">
+    **Problem**: Errors connecting to Upstash Redis
+    
+    **Solutions**:
+    - Verify credentials are correct
+    - Check network connectivity to Upstash
+    - Ensure Redis instance is in the same region (lower latency)
+    - App falls back to in-memory cache on Redis errors
+  </Accordion>
+
+  <Accordion title="High memory usage">
+    **Problem**: In-memory cache consuming too much memory
+    
+    **Solutions**:
+    - Switch to Redis for large-scale deployments
+    - Implement cache size limits (not currently in code)
+    - Use Redis for distributed caching
+  </Accordion>
+</AccordionGroup>
+
+## Cache Monitoring
+
+Monitor cache effectiveness in production:
+
+```typescript
+// Example monitoring implementation
+interface CacheMetrics {
+  hits: number;
+  misses: number;
+  hitRate: number;
+  totalRequests: number;
+  avgResponseTime: number;
+}
+
+function trackCacheMetrics() {
+  // Implementation depends on your monitoring solution
+  // Consider using tools like:
+  // - Vercel Analytics
+  // - DataDog
+  // - New Relic
+  // - Custom logging
+}
+```
+
+## Next Steps
+
+- Set up [Redis caching](/guides/environment-variables#upstash_redis_rest_url) for production
+- Learn about [rate limits](/guides/rate-limits) and how caching helps
+- Configure [environment variables](/guides/environment-variables)
+- Complete the [setup guide](/guides/setup)

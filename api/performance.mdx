@@ -1,0 +1,340 @@
+---
+title: User Performance
+description: Get authenticated user performance metrics
+---
+
+<Note>
+Endpoint: `GET /api/performance`
+
+**Authentication Required**
+</Note>
+
+Retrieve performance analytics for the currently authenticated user. This endpoint returns the same data structure as `/api/wrapped/user` but automatically uses the authenticated user's GitHub account.
+
+## Authentication
+
+<Warning>
+This endpoint requires authentication. Users must be logged in via GitHub OAuth.
+</Warning>
+
+The endpoint:
+1. Validates the user has an active session
+2. Retrieves the GitHub access token from the session
+3. Fetches the authenticated user's GitHub profile
+4. Generates wrapped data for that user
+
+## Request
+
+### Query Parameters
+
+<ParamField query="year" type="number" default="Previous year">
+  Year to generate performance data for (2008 - current year)
+  
+  Example: `2024`
+</ParamField>
+
+<ParamField query="accessToken" type="string">
+  Optional GitHub personal access token override
+  
+  **Note**: Typically not needed as the session token is used automatically.
+</ParamField>
+
+### Validation Rules
+
+- `year`: Integer between 2008 and current year
+
+## Response
+
+The response structure is identical to `/api/wrapped/user`.
+
+<ResponseField name="data" type="UserWrappedData">
+  Complete user wrapped analytics data for the authenticated user
+  
+  See [User Wrapped](/api/user-wrapped#response) for full structure details.
+</ResponseField>
+
+## Examples
+
+### Basic Request
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/performance?year=2024" \
+  -H "Cookie: better-auth.session_token=..."
+```
+
+```javascript JavaScript
+// Assumes user is authenticated via Better Auth
+const response = await fetch(
+  'https://your-domain.com/api/performance?year=2024',
+  { credentials: 'include' }
+);
+
+if (response.ok) {
+  const { data } = await response.json();
+  console.log(`Your commits: ${data.overview.totalCommits}`);
+  console.log(`Your PRs: ${data.overview.totalPRs}`);
+  console.log(`Longest streak: ${data.streak.longest} days`);
+} else {
+  console.error('Not authenticated');
+}
+```
+
+```typescript TypeScript with React
+import { authClient } from '@/lib/auth-client';
+
+function UserPerformance() {
+  const [data, setData] = useState(null);
+  const { data: session } = authClient.useSession();
+  
+  useEffect(() => {
+    if (!session) return;
+    
+    fetch('/api/performance?year=2024')
+      .then(r => r.json())
+      .then(result => setData(result.data));
+  }, [session]);
+  
+  if (!session) return <div>Please log in</div>;
+  if (!data) return <div>Loading...</div>;
+  
+  return (
+    <div>
+      <h1>{data.user.name}'s Performance</h1>
+      <p>Total commits: {data.overview.totalCommits}</p>
+      <p>Total PRs: {data.overview.totalPRs}</p>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+### Default Year (Current - 1)
+
+<CodeGroup>
+```bash cURL
+curl "https://your-domain.com/api/performance" \
+  -H "Cookie: better-auth.session_token=..."
+```
+
+```javascript JavaScript
+// Defaults to previous year
+const response = await fetch('/api/performance', {
+  credentials: 'include'
+});
+const { data } = await response.json();
+
+console.log(`Year: ${data.year}`);
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "user": {
+      "username": "octocat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/583231",
+      "name": "The Octocat",
+      "bio": "GitHub mascot",
+      "public_repos": 8,
+      "followers": 9500,
+      "total_stars": 15420
+    },
+    "year": 2024,
+    "overview": {
+      "totalCommits": 847,
+      "totalPRs": 52,
+      "totalIssues": 28,
+      "topLanguages": [
+        {
+          "language": "TypeScript",
+          "bytes": 2500000,
+          "percentage": 58.3
+        },
+        {
+          "language": "JavaScript",
+          "bytes": 1200000,
+          "percentage": 28.0
+        }
+      ],
+      "busiestMonth": { "month": "Apr", "count": 125 }
+    },
+    "hourlyActivity": {
+      "9": 45,
+      "10": 78,
+      "14": 92,
+      "15": 105
+    },
+    "dailyActivity": {
+      "Monday": 145,
+      "Tuesday": 156,
+      "Wednesday": 142,
+      "Thursday": 138,
+      "Friday": 120
+    },
+    "streak": {
+      "longest": 42,
+      "totalActiveDays": 245,
+      "mostActiveDay": {
+        "date": "2024-04-15",
+        "count": 28
+      }
+    },
+    "topRepos": [
+      {
+        "name": "my-awesome-project",
+        "owner": { "login": "octocat" },
+        "description": "An awesome project",
+        "stars": 1200,
+        "language": "TypeScript"
+      }
+    ],
+    "generatedAt": "2026-03-03T08:00:00Z"
+  }
+}
+```
+
+## Error Responses
+
+<CodeGroup>
+```json 400 Bad Request
+{
+  "error": "Invalid parameters"
+}
+```
+
+```json 401 Unauthorized
+{
+  "error": "Authentication required"
+}
+```
+
+```json 500 Internal Server Error
+{
+  "error": "Failed to fetch performance"
+}
+```
+</CodeGroup>
+
+## Authentication Flow
+
+The endpoint performs the following authentication steps:
+
+```typescript
+// 1. Get session from request headers
+const session = await auth.api.getSession({
+  headers: await headers(),
+});
+
+if (!session?.user) {
+  return NextResponse.json(
+    { error: "Authentication required" },
+    { status: 401 }
+  );
+}
+
+// 2. Get GitHub access token from session
+const githubToken = await auth.api.getAccessToken({
+  headers: await headers(),
+  body: { providerId: "github" },
+});
+
+// 3. Get authenticated user's GitHub profile
+const github = new GitHubService(githubToken?.accessToken);
+const ghUser = await github.getAuthenticatedUser();
+
+// 4. Generate wrapped for that user
+const wrappedData = await analytics.generateUserWrapped(ghUser.login, year);
+```
+
+## Comparison: Performance vs User Wrapped
+
+| Feature | `/api/performance` | `/api/wrapped/user` |
+|---------|-------------------|--------------------|
+| **Authentication** | Required | Optional |
+| **User Selection** | Authenticated user only | Any username |
+| **Private Data** | Always included | Requires auth |
+| **Use Case** | Personal dashboard | Public profiles |
+
+## Use Cases
+
+### Personal Dashboard
+
+```typescript
+function MyDashboard() {
+  const [performance, setPerformance] = useState(null);
+  
+  useEffect(() => {
+    fetch('/api/performance')
+      .then(r => r.json())
+      .then(result => setPerformance(result.data));
+  }, []);
+  
+  return (
+    <div>
+      <h1>My GitHub Performance</h1>
+      {performance && (
+        <>
+          <StatCard 
+            title="Total Commits" 
+            value={performance.overview.totalCommits} 
+          />
+          <StatCard 
+            title="Longest Streak" 
+            value={`${performance.streak.longest} days`} 
+          />
+          <LanguageChart 
+            languages={performance.overview.topLanguages} 
+          />
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+### Year Comparison
+
+```javascript
+async function compareYears() {
+  const [current, previous] = await Promise.all([
+    fetch('/api/performance?year=2024').then(r => r.json()),
+    fetch('/api/performance?year=2023').then(r => r.json())
+  ]);
+  
+  const commitGrowth = 
+    current.data.overview.totalCommits - previous.data.overview.totalCommits;
+  
+  console.log(`Commit growth: ${commitGrowth}`);
+}
+```
+
+## Caching
+
+This endpoint does **not cache** responses because:
+- Data is user-specific and private
+- Users expect real-time data for their own accounts
+- Session-based requests are already optimized
+
+## Source Code
+
+Implementation: `app/api/performance/route.ts`
+
+## Related Endpoints
+
+<CardGroup cols={2}>
+  <Card title="User Wrapped" icon="user" href="/api/user-wrapped">
+    Query any user's public wrapped data
+  </Card>
+  <Card title="User Summary" icon="calendar" href="/api/summary">
+    Get monthly activity summary
+  </Card>
+  <Card title="User Repositories" icon="folder" href="/api/user-repos">
+    List authenticated user's repositories
+  </Card>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn about GitHub OAuth
+  </Card>
+</CardGroup>

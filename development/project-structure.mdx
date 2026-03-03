@@ -1,0 +1,492 @@
+---
+title: 'Project Structure'
+description: 'Directory layout, file organization, and naming conventions'
+icon: 'folder-tree'
+---
+
+## Directory Overview
+
+GitHub Wrapped follows Next.js 16 App Router conventions with a clean separation between pages, components, and business logic.
+
+```plaintext
+github-wrapped/
+├── app/                      # Next.js App Router pages and API routes
+│   ├── api/                  # Backend API endpoints
+│   ├── wrapped/              # Wrapped story pages
+│   ├── layout.tsx            # Root layout with providers
+│   ├── page.tsx              # Homepage
+│   └── opengraph-image.tsx   # OG image generator
+├── components/               # React components
+│   ├── ui/                   # Reusable UI primitives
+│   ├── RepositoryInput.tsx   # Main input form
+│   ├── WrappedStory.tsx      # Story container
+│   ├── WrappedSlide.tsx      # Slide components
+│   └── ...
+├── lib/                      # Business logic and utilities
+│   ├── github.ts             # GitHub API service
+│   ├── analytics.ts          # Analytics engine
+│   ├── cache.ts              # Caching layer
+│   ├── auth.ts               # Authentication config
+│   └── utils.ts              # Helper functions
+├── types/                    # TypeScript type definitions
+│   └── index.ts              # Shared types
+├── hooks/                    # Custom React hooks
+├── public/                   # Static assets
+├── prisma/                   # Database schema (if present)
+├── .env.local                # Environment variables (not in git)
+├── next.config.ts            # Next.js configuration
+├── tailwind.config.ts        # Tailwind CSS configuration
+├── tsconfig.json             # TypeScript configuration
+├── package.json              # Dependencies and scripts
+└── README.md                 # Project documentation
+```
+
+## App Directory (`/app`)
+
+The `app/` directory contains all routes using Next.js App Router.
+
+### API Routes (`/app/api`)
+
+Serverless API endpoints for backend functionality:
+
+<Accordion title="/api/auth/[...all]/route.ts">
+  **Purpose**: better-auth catch-all authentication route
+  
+  Handles all authentication flows:
+  - GitHub OAuth login/logout
+  - Session management
+  - Token refresh
+</Accordion>
+
+<Accordion title="/api/wrapped/route.ts">
+  **Purpose**: Generate repository wrapped data
+  
+  **Request**:
+  ```json
+  { "owner": "facebook", "repo": "react", "year": 2024 }
+  ```
+  
+  **Response**: Complete `WrappedData` object
+  
+  **Flow**:
+  1. Check cache
+  2. Validate repository
+  3. Fetch GitHub data
+  4. Run analytics
+  5. Cache and return
+</Accordion>
+
+<Accordion title="/api/wrapped/user/route.ts">
+  **Purpose**: Generate user-level wrapped ("My Year in Code")
+  
+  **Request**:
+  ```json
+  { "username": "octocat", "year": 2024 }
+  ```
+  
+  **Response**: `UserWrappedData` with personal stats
+</Accordion>
+
+<Accordion title="/api/validate/route.ts">
+  **Purpose**: Quick repository validation
+  
+  Checks if a repository exists and is public before generating wrapped.
+</Accordion>
+
+<Accordion title="/api/summary/route.ts">
+  **Purpose**: Quick repository summary for previews
+  
+  Returns basic info without full analytics.
+</Accordion>
+
+<Accordion title="/api/og/route.tsx">
+  **Purpose**: Dynamic Open Graph image generation
+  
+  Generates custom social sharing images with Vercel OG.
+</Accordion>
+
+<Accordion title="/api/performance/route.ts">
+  **Purpose**: Performance metrics and monitoring
+  
+  Internal endpoint for tracking API performance.
+</Accordion>
+
+<Accordion title="/api/user/repos/route.ts">
+  **Purpose**: Get authenticated user's repositories
+  
+  Returns list of user's repos for quick selection.
+</Accordion>
+
+### Page Routes (`/app`)
+
+<CardGroup cols={2}>
+  <Card title="page.tsx" icon="home">
+    **Homepage / Landing Page**
+    
+    Contains:
+    - Hero section
+    - Repository input form
+    - Year selector
+    - Feature highlights
+    
+    Located at: `/`
+  </Card>
+  
+  <Card title="layout.tsx" icon="layout-template">
+    **Root Layout**
+    
+    Provides:
+    - HTML structure
+    - Theme provider
+    - Auth provider
+    - Global metadata
+    - Font loading
+    
+    Wraps all pages
+  </Card>
+  
+  <Card title="wrapped/[owner]/[repo]/[year]/page.tsx" icon="presentation">
+    **Repository Wrapped Page**
+    
+    Dynamic route for wrapped stories.
+    
+    Example: `/wrapped/facebook/react/2024`
+    
+    Fetches data and renders `WrappedStory`
+  </Card>
+  
+  <Card title="wrapped/user/[username]/[year]/page.tsx" icon="user">
+    **User Wrapped Page**
+    
+    Personal year-in-code wrapped.
+    
+    Example: `/wrapped/user/octocat/2024`
+    
+    Renders `UserWrappedStory`
+  </Card>
+</CardGroup>
+
+## Components (`/components`)
+
+### Feature Components
+
+<Steps>
+  <Step title="RepositoryInput.tsx">
+    Main input component for repository search.
+    
+    **Features**:
+    - URL/slug parsing (`owner/repo` or full GitHub URL)
+    - Real-time validation
+    - Autocomplete suggestions
+    - Error handling
+    - Loading states
+  </Step>
+  
+  <Step title="WrappedStory.tsx">
+    Main container for wrapped presentation.
+    
+    **Features**:
+    - Slide navigation (keyboard + buttons)
+    - Progress indicator
+    - Share functionality
+    - Slide transitions
+    
+    **Location**: `components/WrappedStory.tsx:7885`
+  </Step>
+  
+  <Step title="WrappedSlide.tsx">
+    Individual slide components (8-12 slides).
+    
+    **Slides**:
+    - Intro slide with repo info
+    - Commit statistics
+    - Top contributors
+    - Language breakdown
+    - Community growth
+    - Monthly trends
+    - Special achievements
+    - Share slide
+    
+    **Location**: `components/WrappedSlide.tsx:47979`
+  </Step>
+  
+  <Step title="UserWrappedStory.tsx & UserWrappedSlide.tsx">
+    User-specific wrapped components.
+    
+    Personal stats including:
+    - Total commits/PRs/issues
+    - Top languages
+    - Coding streaks
+    - Busiest day/hour
+    - Top repositories
+  </Step>
+</Steps>
+
+### UI Components (`/components/ui`)
+
+Reusable, styled Radix UI primitives:
+
+```plaintext
+components/ui/
+├── accordion.tsx        # Collapsible sections
+├── alert-dialog.tsx     # Modal dialogs
+├── avatar.tsx           # User avatars
+├── button.tsx           # Button variants
+├── card.tsx             # Card containers
+├── carousel.tsx         # Image carousels
+├── chart.tsx            # Chart components
+├── dialog.tsx           # Dialogs
+├── dropdown-menu.tsx    # Dropdown menus
+├── input.tsx            # Form inputs
+├── popover.tsx          # Popovers
+├── select.tsx           # Select dropdowns
+├── tooltip.tsx          # Tooltips
+└── ...                  # 30+ more components
+```
+
+<Tip>
+  All UI components follow the [shadcn/ui](https://ui.shadcn.com) pattern: copy-paste, fully customizable, built on Radix UI.
+</Tip>
+
+### Layout Components
+
+- `hero.tsx` - Landing page hero section
+- `theme-provider.tsx` - Dark/light mode provider
+- `theme-toggle.tsx` - Theme switcher component
+
+## Library Code (`/lib`)
+
+Business logic and service layer:
+
+<CardGroup cols={2}>
+  <Card title="github.ts" icon="github">
+    **GitHub API Service**
+    
+    `GitHubService` class with methods:
+    - Repository operations
+    - Commit fetching
+    - Contributor queries
+    - Rate limit management
+    
+    **Lines**: 537
+  </Card>
+  
+  <Card title="analytics.ts" icon="chart-line">
+    **Analytics Engine**
+    
+    `AnalyticsEngine` class:
+    - Data transformation
+    - Statistics calculation
+    - Insight generation
+    - Trend analysis
+    
+    **Lines**: 823
+  </Card>
+  
+  <Card title="cache.ts" icon="database">
+    **Caching Layer**
+    
+    Functions:
+    - `getCachedWrapped()`
+    - `setCachedWrapped()`
+    - `getCachedValidation()`
+    - Dual Redis/in-memory support
+    
+    **Lines**: 178
+  </Card>
+  
+  <Card title="auth.ts" icon="shield-check">
+    **Authentication Config**
+    
+    better-auth configuration:
+    - GitHub OAuth setup
+    - Session management
+    - Database adapter
+  </Card>
+  
+  <Card title="authClient.ts" icon="key">
+    **Auth Client**
+    
+    Client-side auth hooks and utilities.
+  </Card>
+  
+  <Card title="redis.ts" icon="database">
+    **Redis Client**
+    
+    Upstash Redis initialization:
+    - Connection setup
+    - Environment checks
+    - Type-safe client
+    
+    **Lines**: 12
+  </Card>
+  
+  <Card title="utils.ts" icon="wrench">
+    **Utility Functions**
+    
+    Helper functions:
+    - `cn()` - className merger
+    - Date formatters
+    - String utilities
+  </Card>
+</CardGroup>
+
+## Types (`/types`)
+
+Centralized TypeScript type definitions:
+
+```typescript
+// types/index.ts
+
+export interface WrappedData { ... }
+export interface UserWrappedData { ... }
+export interface RepositoryInfo { ... }
+export interface Contributor { ... }
+export interface CommitStats { ... }
+export interface LanguageStats { ... }
+export interface MonthlySnapshot { ... }
+export interface CacheEntry { ... }
+```
+
+**All types are exported from a single file** for easy imports:
+
+```typescript
+import type { WrappedData, CommitStats } from '@/types'
+```
+
+## Configuration Files
+
+<Accordion title="next.config.ts">
+  Next.js configuration:
+  - TypeScript support
+  - Image optimization settings
+  - API route configuration
+  - Build output settings
+</Accordion>
+
+<Accordion title="tailwind.config.ts (implicit with Tailwind 4)">
+  Tailwind CSS configuration:
+  - Custom colors and themes
+  - Dark mode settings
+  - Plugin configuration (animate)
+  - Custom utilities
+</Accordion>
+
+<Accordion title="tsconfig.json">
+  TypeScript compiler options:
+  - Path aliases (`@/` → root)
+  - Strict type checking
+  - JSX configuration
+  - Module resolution
+</Accordion>
+
+<Accordion title="eslint.config.mjs">
+  ESLint configuration:
+  - Next.js recommended rules
+  - TypeScript rules
+  - Code style enforcement
+</Accordion>
+
+<Accordion title="components.json">
+  shadcn/ui configuration:
+  - Component path
+  - Utility path
+  - Tailwind config
+  - TypeScript settings
+</Accordion>
+
+## File Naming Conventions
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="react">
+    **PascalCase.tsx**
+    
+    Examples:
+    - `RepositoryInput.tsx`
+    - `WrappedStory.tsx`
+    - `UserProfile.tsx`
+  </Card>
+  
+  <Card title="Utilities & Services" icon="code">
+    **camelCase.ts**
+    
+    Examples:
+    - `github.ts`
+    - `analytics.ts`
+    - `cache.ts`
+    - `utils.ts`
+  </Card>
+  
+  <Card title="Routes" icon="route">
+    **lowercase with folders**
+    
+    Examples:
+    - `app/page.tsx`
+    - `app/api/wrapped/route.ts`
+    - `app/wrapped/[owner]/[repo]/[year]/page.tsx`
+  </Card>
+  
+  <Card title="Configuration" icon="gear">
+    **Various conventions**
+    
+    Examples:
+    - `next.config.ts`
+    - `tailwind.config.ts`
+    - `tsconfig.json`
+    - `.env.local`
+  </Card>
+</CardGroup>
+
+## Import Aliases
+
+The project uses path aliases for cleaner imports:
+
+```typescript
+// tsconfig.json
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"]
+    }
+  }
+}
+```
+
+**Usage**:
+
+```typescript
+// Instead of:
+import { GitHubService } from '../../lib/github'
+import type { WrappedData } from '../../types'
+
+// Use:
+import { GitHubService } from '@/lib/github'
+import type { WrappedData } from '@/types'
+```
+
+## Key Files Reference
+
+| File | Purpose | Lines |
+|------|---------|-------|
+| `lib/github.ts` | GitHub API integration | 537 |
+| `lib/analytics.ts` | Analytics processing | 823 |
+| `components/WrappedSlide.tsx` | Slide components | ~48k |
+| `components/WrappedStory.tsx` | Story container | ~8k |
+| `components/RepositoryInput.tsx` | Input form | ~12k |
+| `lib/cache.ts` | Caching layer | 178 |
+| `types/index.ts` | Type definitions | 131 |
+
+<Note>
+  Line counts are approximate and based on the current codebase. They may change as the project evolves.
+</Note>
+
+## Static Assets (`/public`)
+
+Static files served at the root:
+
+- Favicon and app icons
+- Open Graph images
+- Robots.txt
+- Manifest files
+
+Accessed via `/filename.ext` (e.g., `/favicon.ico`)

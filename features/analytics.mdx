@@ -1,0 +1,402 @@
+---
+title: Analytics Engine
+description: Deep dive into GitHub Wrapped's analytics calculations and data processing
+---
+
+# Analytics Engine
+
+The Analytics Engine is the core of GitHub Wrapped, processing raw GitHub data into meaningful insights and visualizations. It's implemented in `lib/analytics.ts` as the `AnalyticsEngine` class.
+
+## Architecture
+
+The engine uses a service-based architecture:
+
+```typescript
+class AnalyticsEngine {
+  private github: GitHubService;
+  
+  constructor(github: GitHubService) {
+    this.github = github;
+  }
+}
+```
+
+All GitHub API interactions go through the `GitHubService`, allowing the analytics engine to focus purely on data transformation and calculation.
+
+## Commit Pattern Analysis
+
+The engine provides sophisticated commit pattern analysis to reveal development workflows.
+
+### By Month
+
+Tracks commit distribution across calendar months:
+
+```typescript
+byMonth: {
+  "January": 45,
+  "February": 67,
+  "March": 123,
+  // ... etc
+}
+```
+
+**Implementation** (`lib/analytics.ts:501-555`):
+- Parses commit timestamps using `date-fns`
+- Groups commits by month name
+- Calculates busiest month by comparing counts
+
+### By Day of Week
+
+Identifies which days of the week are most active:
+
+```typescript
+byDayOfWeek: {
+  "Monday": 89,
+  "Tuesday": 102,
+  "Wednesday": 95,
+  "Thursday": 87,
+  "Friday": 76,
+  "Saturday": 23,
+  "Sunday": 15
+}
+```
+
+**Use Cases**:
+- Distinguish between work and personal projects
+- Identify weekend warriors
+- Understand team work schedules
+
+### By Hour
+
+Reveals productivity patterns throughout the day:
+
+```typescript
+byHour: {
+  "0": 5,   // Midnight
+  "1": 2,
+  // ...
+  "14": 45, // 2 PM - peak hour
+  "15": 42,
+  // ...
+  "23": 8
+}
+```
+
+**Implementation Details**:
+- Uses `getHours()` from `date-fns` to extract hour (0-23)
+- Builds histogram of commit activity
+- Enables "Night Owl" detection (commits after 22:00)
+
+### Average Per Day
+
+Calculates the daily commit rate:
+
+```typescript
+averagePerDay: number  // e.g., 2.47 commits/day
+```
+
+Formula:
+```typescript
+const rangeMs = new Date(until).getTime() - new Date(since).getTime();
+const totalDays = Math.max(1, Math.ceil(rangeMs / (1000 * 60 * 60 * 24)));
+const averagePerDay = commits.length / totalDays;
+```
+
+## Contributor Analysis
+
+The engine analyzes contributors from multiple perspectives.
+
+### Top by Commits
+
+Ranks contributors by total commit count:
+
+```typescript
+topByCommits: [
+  {
+    login: "alice",
+    avatar_url: "https://...",
+    contributions: 342
+  },
+  // ... top 5
+]
+```
+
+**Data Source**: GitHub's `/repos/{owner}/{repo}/contributors` endpoint
+
+### Top by Lines Changed
+
+Ranks by total lines added + removed:
+
+```typescript
+topByLines: [
+  {
+    login: "bob",
+    avatar_url: "https://...",
+    contributions: 156,
+    linesAdded: 8453,
+    linesRemoved: 2341
+  },
+  // ... top 5
+]
+```
+
+<Warning>
+Line counting requires fetching individual commit stats, which is API-intensive. The engine samples up to 20 commits and includes a 100ms delay between requests to avoid rate limits.
+</Warning>
+
+**Implementation** (`lib/analytics.ts:557-654`):
+- Filters commits to top 5 contributors only
+- Samples maximum 20 commits to reduce API calls
+- Falls back to estimated values if stats unavailable
+- Uses `Promise.allSettled()` for resilient error handling
+
+### New Contributors
+
+Estimates newcomers to the project:
+
+```typescript
+newContributors: number  // Estimated count
+```
+
+Current implementation: Contributors with ≤10 commits are considered "new" (simplified heuristic).
+
+## Language Statistics
+
+### Calculation Method
+
+```typescript
+private calculateLanguageStats(
+  languages: Record<string, number>
+): LanguageStats[]
+```
+
+**Process** (`lib/analytics.ts:780-796`):
+
+1. **Sum Total Bytes**
+   ```typescript
+   const total = Object.values(languages).reduce(
+     (sum, bytes) => sum + bytes,
+     0
+   );
+   ```
+
+2. **Calculate Percentages**
+   ```typescript
+   percentage: Math.round((bytes / total) * 100 * 100) / 100
+   ```
+
+3. **Sort and Limit**
+   - Sort by bytes (descending)
+   - Return top 10 languages
+
+### Output Format
+
+```typescript
+languages: [
+  {
+    language: "TypeScript",
+    bytes: 425360,
+    percentage: 45.32
+  },
+  {
+    language: "JavaScript",
+    bytes: 312840,
+    percentage: 33.35
+  },
+  // ... up to 10 languages
+]
+```
+
+## Community Growth Metrics
+
+Tracks repository growth across multiple dimensions:
+
+```typescript
+community: {
+  starsGained: number;      // New stars in date range
+  forksGained: number;      // New forks
+  issuesOpened: number;     // Issues created
+  issuesClosed: number;     // Issues resolved
+  prsMerged: number;        // PRs merged
+  watchersGained: number;   // Currently always 0
+}
+```
+
+### Stars Gained
+
+**Ideal**: Fetch stargazers with timestamps and count those in range
+
+**Fallback**: If API limit reached, estimate as 10% of total stars
+
+```typescript
+try {
+  const stargazers = await this.github.getStargazers(owner, repo, since);
+  starsGained = stargazers.length;
+} catch {
+  starsGained = Math.floor(repoInfo.stars * 0.1);  // Estimate
+}
+```
+
+### Forks Gained
+
+Counts forks created during the year:
+
+```typescript
+forksGained: Math.max(0, forks.length || Math.floor(repoInfo.forks * 0.1))
+```
+
+Uses actual fork data when available, falls back to 10% estimate.
+
+### Issues and PRs
+
+Direct counts from GitHub API:
+- Issues opened: Filter by `created_at` in range
+- Issues closed: Filter by `closed_at` in range  
+- PRs merged: Filter by `merged_at` in range
+
+## Monthly Snapshots
+
+Provides granular month-by-month tracking.
+
+### Data Structure
+
+```typescript
+monthly: [
+  {
+    month: "Jan",
+    commits: 89,
+    prsMerged: 23,
+    issuesOpened: 12,
+    issuesClosed: 15,
+    reviews: 0,
+    stars: 45,
+    forks: 8,
+    trafficViews: 0,
+    trafficClones: 0,
+    contributors: 7  // Unique contributors this month
+  },
+  // ... one entry per month
+]
+```
+
+### Generation Process
+
+**Implementation** (`lib/analytics.ts:656-778`):
+
+1. **Initialize Monthly Map**
+   - Create entry for each month (Jan-Dec or Jan-current month)
+   - Initialize all counters to 0
+
+2. **Process Commits**
+   - Parse commit timestamp
+   - Verify it's in the target year
+   - Extract month label ("Jan", "Feb", etc.)
+   - Increment commit counter
+   - Track unique contributor usernames
+
+3. **Process PRs, Issues, Stars, Forks**
+   - Similar process for each data type
+   - Use appropriate date field:
+     - PRs: `merged_at` (or `closed_at`, `created_at` as fallback)
+     - Issues opened: `created_at`
+     - Issues closed: `closed_at`
+     - Stars: `starred_at`
+     - Forks: `created_at`
+
+4. **Build Output Array**
+   - Convert map to sorted array
+   - Include contributor count (Set size)
+
+<Info>
+Monthly snapshots enable trend visualization, helping users identify growth spurts, quiet periods, and seasonal patterns.
+</Info>
+
+## Performance Optimizations
+
+### Parallel Data Fetching
+
+The engine fetches all required data in parallel:
+
+```typescript
+const [
+  repoInfo,
+  contributors,
+  commits,
+  languages,
+  releases,
+  issuesOpened,
+  issuesClosed,
+  prsMerged,
+  forks,
+] = await Promise.all([...]);
+```
+
+This reduces total generation time from ~10 seconds to ~2-3 seconds.
+
+### Rate Limit Protection
+
+<CardGroup cols={2}>
+  <Card title="Sampling" icon="flask">
+    Only samples 20 commits when calculating line changes to reduce API calls
+  </Card>
+  
+  <Card title="Delays" icon="clock">
+    Includes 100ms delays between commit stat requests
+  </Card>
+  
+  <Card title="Repository Limit" icon="server">
+    User wrapped scans max 15 repositories to prevent timeout
+  </Card>
+  
+  <Card title="Fallback Values" icon="shield">
+    Uses estimates when API limits are hit
+  </Card>
+</CardGroup>
+
+### Caching Strategy
+
+All wrapped data is cached in Redis:
+- **TTL**: 24 hours
+- **Key pattern**: `wrapped:{type}:v2:{identifier}:{year}`
+- **Benefit**: Subsequent views are instant
+
+## Error Handling
+
+The engine uses resilient error handling:
+
+```typescript
+const [languagesResult, commitsResult, prsResult, issuesResult] =
+  await Promise.allSettled([...]);
+
+if (languagesResult.status === "fulfilled") {
+  // Use data
+} else {
+  console.warn("Skipping languages:", languagesResult.reason);
+  // Continue with empty data
+}
+```
+
+This ensures that:
+- Partial failures don't crash generation
+- Users get best-effort results
+- Errors are logged for debugging
+
+## Extensibility
+
+The `AnalyticsEngine` is designed for extension:
+
+- **New metrics**: Add new calculation methods
+- **Custom date ranges**: Use `generateWrappedRange()` or `generateUserWrappedRange()`
+- **Monthly reports**: Use `generateUserWrappedForMonth()`
+
+Example custom range:
+
+```typescript
+const q1Wrapped = await analytics.generateWrappedRange(
+  'facebook',
+  'react',
+  2024,
+  '2024-01-01T00:00:00Z',
+  '2024-03-31T23:59:59Z'
+);
+```
