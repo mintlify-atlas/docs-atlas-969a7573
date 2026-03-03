@@ -1,0 +1,111 @@
+{
+  "projectType": "saas",
+  "projectName": "GitHub Wrapped",
+  "projectDescription": "A beautiful, Spotify-inspired year-in-review visualization for any public GitHub repository",
+  "theme": "almond",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/repository-wrapped",
+              "features/user-wrapped",
+              "features/analytics",
+              "features/sharing"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/setup",
+              "guides/environment-variables",
+              "guides/rate-limits",
+              "guides/caching"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/wrapped",
+              "api/user-wrapped",
+              "api/validate",
+              "api/performance",
+              "api/summary"
+            ]
+          },
+          {
+            "group": "Data Models",
+            "pages": [
+              "api/data-models"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/architecture",
+              "development/tech-stack",
+              "development/project-structure"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/contributing",
+              "development/local-development"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Repository Wrapped - Year-in-review for any public GitHub repository",
+    "User Wrapped - Personal year-in-code for GitHub users",
+    "Comprehensive Analytics - Commits, contributors, languages, community growth",
+    "Beautiful Visualizations - Spotify-inspired animations and story-based presentation",
+    "Social Sharing - Share on Twitter with one click",
+    "Smart Caching - 24-hour cache with rate limit optimization"
+  ],
+  "publicApiSurface": [
+    "POST /api/wrapped - Generate repository wrapped data",
+    "POST /api/wrapped/user - Generate user wrapped data",
+    "POST /api/validate - Validate repository access",
+    "GET /api/performance - Check API performance metrics",
+    "GET /api/summary - Get wrapped summary data",
+    "GET /api/og - Generate Open Graph images",
+    "GitHubService - GitHub API service class",
+    "AnalyticsEngine - Data analytics and processing",
+    "WrappedData interface - Repository wrapped data structure",
+    "UserWrappedData interface - User wrapped data structure"
+  ]
+}
